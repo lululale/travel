@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>沪苏四日手册</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Noto+Serif+SC:wght@400;700;900&display=swap');
+:root{
+  --ink:#1a1814;--paper:#f7f3ec;--warm:#ede7d9;--jade:#2d5a47;--jade-light:#3d7a60;
+  --rust:#b84c2c;--gold:#c4963a;--muted:#7a7060;--line:#ddd5c0;--tag-bg:#e8e0cc;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--paper);color:var(--ink);font-family:'Noto Sans SC',sans-serif;font-size:14px;line-height:1.7;max-width:600px;margin:0 auto;}
+
+/* ── PAGE TABS ── */
+.page-tabs{display:flex;background:#1a1814;position:sticky;top:0;z-index:200;}
+.page-tab{flex:1;padding:13px 4px;text-align:center;font-size:12px;font-weight:700;color:rgba(255,255,255,.5);cursor:pointer;border-bottom:3px solid transparent;}
+.page-tab.on{color:#fff;border-bottom-color:var(--gold);}
+.page{display:none;}
+.page.on{display:block;}
+
+/* ── COVER ── */
+.cover{background:var(--jade);color:var(--paper);padding:40px 20px 32px;position:relative;overflow:hidden;}
+.cover::after{content:'';position:absolute;right:-40px;top:-40px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none;}
+.cover-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+.cover-tags span{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:99px;padding:4px 12px;font-size:12px;}
+.cover-route{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.15);font-size:13px;color:rgba(247,243,236,.8);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.cover-route .city{color:#fff;font-weight:700;}
+.cover-route .arr{color:var(--gold);}
+
+/* ── NAV ── */
+.nav{position:sticky;top:42px;z-index:100;background:var(--warm);border-bottom:1px solid var(--line);display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.nav::-webkit-scrollbar{display:none;}
+.nav a{flex-shrink:0;padding:11px 13px;font-size:11px;font-weight:700;color:var(--muted);text-decoration:none;white-space:nowrap;border-bottom:2px solid transparent;}
+.nav a:hover{color:var(--jade);border-color:var(--jade);}
+
+/* ── SECTION ── */
+.section{padding:32px 20px 10px;border-bottom:6px solid var(--warm);}
+.section-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:6px;}
+.day-badge{flex-shrink:0;width:36px;height:36px;background:var(--rust);color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Noto Serif SC',serif;font-weight:900;font-size:13px;}
+.day-badge.jade{background:var(--jade);}
+.day-badge.gold{background:var(--gold);}
+.day-badge.navy{background:#1a3a60;}
+.section-title{font-family:'Noto Serif SC',serif;font-size:19px;font-weight:700;color:var(--jade);}
+.section-sub{font-size:12px;color:var(--muted);margin:4px 0 20px;padding-left:48px;}
+
+/* ── STOPS ── */
+.stop-list{display:grid;gap:0;}
+.stop-card{padding:14px 0 14px 44px;position:relative;border-left:2px dashed var(--line);margin-left:16px;}
+.stop-card:last-child{border-left-color:transparent;padding-bottom:4px;}
+.stop-dot{position:absolute;left:-7px;top:18px;width:12px;height:12px;background:var(--jade);border:2px solid var(--paper);border-radius:50%;}
+.stop-dot.rust{background:var(--rust);}
+.stop-dot.gold{background:var(--gold);}
+.stop-dot.navy{background:#1a3a60;}
+.stop-time{font-size:11px;font-weight:700;color:var(--rust);letter-spacing:.04em;margin-bottom:3px;}
+.stop-name{font-size:16px;font-weight:700;color:var(--ink);margin-bottom:8px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
+.map-btn{display:inline-flex;align-items:center;gap:3px;background:var(--jade);color:#fff!important;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;text-decoration:none;}
+.info-row{display:flex;gap:6px;margin-bottom:6px;font-size:13px;color:#4a4236;}
+.info-tag{flex-shrink:0;background:var(--tag-bg);color:var(--jade);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;height:fit-content;margin-top:2px;}
+.warn-tag{background:#fde8e2;color:var(--rust);}
+.good-tag{background:#e0f0e8;color:var(--jade);}
+.note-box{background:#fff8f0;border-left:3px solid var(--gold);padding:9px 12px;border-radius:0 8px 8px 0;font-size:12px;color:#5a4a30;margin-top:8px;}
+.transit-row{padding:7px 0 7px 44px;margin-left:16px;border-left:2px dashed var(--line);font-size:11px;color:var(--gold);font-weight:700;}
+.transit-row::before{content:'↓ ';}
+.transport-box{background:#f0f7f3;border:1px solid #c5ddd0;border-radius:10px;padding:13px 15px;margin:0 0 18px;}
+.transport-box h3{font-size:12px;font-weight:700;color:var(--jade);margin-bottom:9px;}
+.t-step{display:flex;gap:7px;margin-bottom:7px;font-size:12px;color:#3a4a40;}
+.t-icon{flex-shrink:0;width:20px;height:20px;background:var(--jade);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;margin-top:1px;}
+.t-badge{display:inline-block;background:var(--rust);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin:0 2px;}
+.t-badge.g{background:var(--jade);}
+
+/* ── OPTIONS ── */
+.option-block{border-radius:10px;border:1px solid var(--line);padding:14px;margin-bottom:12px;background:var(--warm);}
+.option-block h4{font-size:12px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;color:var(--ink);}
+.opt-badge{background:var(--gold);color:#fff;font-size:10px;font-weight:900;padding:2px 7px;border-radius:4px;}
+.opt-step{display:flex;gap:7px;margin-bottom:6px;font-size:12px;color:#4a4236;}
+.opt-num{flex-shrink:0;width:17px;height:17px;background:var(--jade);color:#fff;border-radius:50%;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+
+/* ── LUGGAGE ── */
+.luggage-section{background:var(--jade);color:var(--paper);padding:28px 20px;}
+.luggage-section h2{font-family:'Noto Serif SC',serif;font-size:17px;font-weight:700;color:var(--gold);margin-bottom:4px;}
+.lsub{font-size:11px;color:rgba(247,243,236,.6);margin-bottom:16px;}
+.lug-option{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:14px;margin-bottom:12px;}
+.lug-option h3{font-size:12px;font-weight:700;color:#fff;margin-bottom:9px;display:flex;align-items:center;gap:8px;}
+.lug-badge{background:var(--gold);color:#fff;font-size:10px;font-weight:900;padding:2px 7px;border-radius:4px;}
+.lug-badge.rec{background:#1a3a60;}
+.lug-steps{list-style:none;display:grid;gap:6px;}
+.lug-steps li{display:flex;gap:7px;font-size:12px;color:rgba(247,243,236,.85);}
+.lug-num{flex-shrink:0;width:17px;height:17px;background:rgba(255,255,255,.15);color:#fff;border-radius:50%;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+.store-box{background:rgba(255,255,255,.06);border-radius:7px;padding:10px;margin-top:9px;}
+.store-title{font-size:11px;font-weight:700;color:var(--gold);margin-bottom:6px;}
+.store-row{font-size:11px;color:rgba(247,243,236,.75);margin-bottom:4px;display:flex;gap:5px;}
+.s-tag{flex-shrink:0;background:rgba(196,150,58,.28);color:var(--gold);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;height:fit-content;}
+
+/* ── TIPS ── */
+.tips-section{padding:28px 20px 40px;background:var(--warm);}
+.tips-section h2{font-family:'Noto Serif SC',serif;font-size:17px;font-weight:700;color:var(--jade);margin-bottom:16px;}
+.tip-grid{display:grid;gap:10px;}
+.tip-card{background:#fff;border-radius:10px;padding:13px 15px;border-left:4px solid var(--jade);}
+.tip-card h4{font-size:12px;font-weight:700;color:var(--jade);margin-bottom:7px;}
+.tip-card ul{list-style:none;display:grid;gap:4px;}
+.tip-card li{font-size:12px;color:#4a4236;padding-left:13px;position:relative;}
+.tip-card li::before{content:'·';position:absolute;left:0;color:var(--gold);font-weight:900;font-size:15px;top:-2px;}
+.tip-card.warn{border-color:var(--rust);}
+.tip-card.warn h4{color:var(--rust);}
+
+/* ── MAP PAGE ── */
+.map-header{background:#2d5a47;padding:11px 16px 9px;display:flex;justify-content:space-between;align-items:center;}
+.map-header h2{font-size:13px;font-weight:700;color:#f5f0e6;margin:0;}
+.map-header span{font-size:10px;color:rgba(245,240,230,.55);}
+.day-tabs{display:flex;background:#e8e1d0;border-bottom:2px solid #d4c8b0;}
+.day-tab{flex:1;padding:9px 2px;text-align:center;font-size:10px;font-weight:700;color:#7a7060;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;}
+.day-tab.on{color:#2d5a47;border-bottom-color:#2d5a47;background:#f5f0e6;}
+#map{height:300px;width:100%;}
+.map-stops{padding:10px 14px 0;}
+.mstop-row{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid #e0d8c8;align-items:flex-start;}
+.mstop-row:last-child{border-bottom:none;}
+.mpin{flex-shrink:0;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:1px;}
+.mstop-name{font-size:12px;font-weight:700;color:#1a1814;margin-bottom:2px;}
+.mstop-time{font-size:10px;color:#9a9080;margin-bottom:2px;}
+.mstop-meta{font-size:11px;display:flex;flex-direction:column;gap:2px;}
+.mstop-meta .w{color:#b84c2c;}
+.mstop-meta .g{color:#2d5a47;}
+.mstop-meta .n{color:#7a7060;}
+.mtransit{padding:4px 0 4px 31px;font-size:11px;color:#c4963a;font-weight:600;}
+.mtransit::before{content:'↓ ';}
+.map-footer{padding:8px 14px 12px;font-size:10px;color:#9a9080;text-align:center;background:#f5f0e6;}
+
+.footer{text-align:center;padding:20px;font-size:11px;color:var(--muted);background:var(--warm);border-top:1px solid var(--line);}
+</style>
+</head>
+<body>
+
+<!-- TOP TABS -->
+<div class="page-tabs">
+  <div class="page-tab on" onclick="showPage('handbook')">📋 手册</div>
+  <div class="page-tab" onclick="showPage('mapview')">🗺️ 地图</div>
+</div>
+
+<!-- ════════════════════════════════════
+     PAGE 1: HANDBOOK
+════════════════════════════════════ -->
+<div class="page on" id="handbook">
+
+<div class="cover">
+  <div class="cover-tags">
+    <span>🛬 PVG落地直奔苏州</span>
+    <span>🧳 行李只动一次</span>
+    <span>🚄 高铁25min城际</span>
+    <span>📍 高德链接直接导</span>
+  </div>
+  <div class="cover-route">
+    <span class="city">新加坡</span><span class="arr">✈</span>
+    <span class="city">浦东PVG</span><span class="arr">→高铁</span>
+    <span class="city">苏州（住3晚）</span><span class="arr">→高铁往返</span>
+    <span class="city">上海（Day3+4当天）</span>
+  </div>
+</div>
+
+<nav class="nav">
+  <a href="#day0">抵达</a>
+  <a href="#day1">Day1</a>
+  <a href="#day2">Day2</a>
+  <a href="#day3">Day3</a>
+  <a href="#day4">Day4</a>
+  <a href="#luggage">🧳 行李</a>
+  <a href="#tips">须知</a>
+</nav>
+
+<!-- 抵达 -->
+<div class="section" id="day0">
+  <div class="section-head"><div class="day-badge">到</div><div><div class="section-title">PVG → 苏州 抵达</div></div></div>
+  <div class="section-sub">新加坡飞浦东，落地直奔苏州，不在上海停留</div>
+  <div class="transport-box">
+    <h3>🚄 路线：PVG → 苏州站（全程约2-2.5小时）</h3>
+    <div class="t-step"><div class="t-icon">1</div><div>出关后乘<strong>地铁2号线</strong><span class="t-badge">2号线</span>方向"虹桥火车站"，坐到<strong>上海火车站</strong>（约55分钟，约7元）</div></div>
+    <div class="t-step"><div class="t-icon">2</div><div>上海火车站换乘<strong>高铁/动车</strong>到<strong>苏州站</strong>（约25分钟，约29-50元）—— 提前在12306 App买好</div></div>
+    <div class="t-step"><div class="t-icon">⚡</div><div><strong>直达方案：</strong>高德叫顺风车从PVG直达苏州，约1.5小时，约150-200元</div></div>
+    <div class="note-box">⚠️ 高铁票提前在12306 App买好，订票选"护照"。高峰期出发前3-5天搞定。</div>
+  </div>
+  <div class="stop-list">
+    <div class="stop-card">
+      <div class="stop-dot"></div>
+      <div class="stop-time">落地后</div>
+      <div class="stop-name">浦东国际机场（PVG）<a class="map-btn" href="https://surl.amap.com/6UqXpHK2c3TW" target="_blank">📍高德</a></div>
+      <div class="info-row"><span class="info-tag">地址</span>上海市浦东新区迎宾大道900号</div>
+      <div class="info-row"><span class="info-tag warn-tag">注意</span>T1/T2要分清，大多数国际航班在T2，地铁2号线也在T2</div>
+      <div class="info-row"><span class="info-tag">提醒</span>出关后确认支付宝/微信可以正常付款</div>
+    </div>
+    <div class="transit-row">地铁2号线约55分钟 → 上海火车站换高铁 → 苏州站约25分钟</div>
+    <div class="stop-card">
+      <div class="stop-dot"></div>
+      <div class="stop-time">下午/傍晚抵达</div>
+      <div class="stop-name">苏州站<a class="map-btn" href="https://surl.amap.com/6UqXpKk2c3TY" target="_blank">📍高德</a></div>
+      <div class="info-row"><span class="info-tag">地址</span>苏州市姑苏区火车站路9号</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>酒店选平江路/观前街附近，步行就能逛古城</div>
+      <div class="note-box">今晚放行李，平江路附近随便走走吃个饭就好。</div>
+    </div>
+  </div>
+</div>
+
+<!-- Day 1 -->
+<div class="section" id="day1">
+  <div class="section-head"><div class="day-badge">01</div><div><div class="section-title">苏州 · 古城手作日</div></div></div>
+  <div class="section-sub">手作体验 + 平江路傍晚，睡醒再出发</div>
+  <div class="stop-list">
+    <div class="stop-card">
+      <div class="stop-dot"></div>
+      <div class="stop-time">14:30 — 16:30</div>
+      <div class="stop-name">隐工匠手作工坊（蓝·芳华店）<a class="map-btn" href="https://surl.amap.com/6UqXpHK2c3TZ" target="_blank">📍高德</a></div>
+      <div class="info-row"><span class="info-tag">地址</span>姑苏区人民路200号 蓝·芳华创意园25幢307室</div>
+      <div class="info-row"><span class="info-tag">交通</span>地铁<span class="t-badge g">4号线</span>苏州站→2a口出，步行400米</div>
+      <div class="info-row"><span class="info-tag">预约</span>提前1-2天微信/电话预约，当天去基本没位置</div>
+      <div class="info-row"><span class="info-tag">费用</span>约100-200元/人，陶艺/皮具/团扇可选</div>
+      <div class="info-row"><span class="info-tag warn-tag">避雷</span>一定要提前预约，不接受临时walk-in</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>陶艺最容易上手，做完可以选择邮寄</div>
+    </div>
+    <div class="transit-row">步行约25分钟 / 打车约10元</div>
+    <div class="stop-card">
+      <div class="stop-dot"></div>
+      <div class="stop-time">17:00 — 20:00</div>
+      <div class="stop-name">平江路历史街区<a class="map-btn" href="https://surl.amap.com/6UqXpKk2c3Ta" target="_blank">📍高德</a></div>
+      <div class="info-row"><span class="info-tag">地址</span>姑苏区平江路（相门地铁站旁）</div>
+      <div class="info-row"><span class="info-tag">交通</span>地铁<span class="t-badge g">4号线</span>相门站，出站即到</div>
+      <div class="info-row"><span class="info-tag warn-tag">避雷</span>主街两边都是同款纪念品店，走侧面小巷子才值得逛</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>19:00灯笼亮起光线最好拍</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>晚饭：朱鸿兴苏式面、哑巴生煎都在这一带</div>
+      <div class="note-box">今天动线：酒店→手作→平江路晚饭→步行回酒店，全程不绕路。</div>
+    </div>
+  </div>
+</div>
+
+<!-- Day 2 -->
+<div class="section" id="day2">
+  <div class="section-head"><div class="day-badge jade">02</div><div><div class="section-title">苏州 · 森林世界 + 金鸡湖</div></div></div>
+  <div class="section-sub">上午玩园内，下午金鸡湖散步看日落，不坐船</div>
+  <div class="stop-list">
+    <div class="stop-card">
+      <div class="stop-dot gold"></div>
+      <div class="stop-time">10:00 — 14:00</div>
+      <div class="stop-name">苏州乐园森林世界（园内）<a class="map-btn" href="https://surl.amap.com/6UqXpJK2c3Tb" target="_blank">📍高德</a></div>
+      <div class="info-row"><span class="info-tag">地址</span>吴中区石湖西路288号</div>
+      <div class="info-row"><span class="info-tag">交通</span>地铁<span class="t-badge">1号线</span>终点木渎站，打车约10分钟</div>
+      <div class="info-row"><span class="info-tag">费用</span>约120-180元，提前美团/官网买有折扣</div>
+      <div class="info-row"><span class="info-tag">时间</span>只玩园内，不进水世界，约3-4小时</div>
+      <div class="info-row"><span class="info-tag warn-tag">避雷</span>周末排队长，建议工作日去或开园前到门口等</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>热带雨林区+鸟巢区拍照出片</div>
+    </div>
+    <div class="transit-row">打车约25分钟去金鸡湖，约25元</div>
+    <div class="stop-card">
+      <div class="stop-dot"></div>
+      <div class="stop-time">15:30 — 17:30</div>
+      <div class="stop-name">金鸡湖环湖步道<a class="map-btn" href="https://surl.amap.com/6UqXpLK2c3Tc" target="_blank">📍高德</a></div>
+      <div class="info-row"><span class="info-tag">地址</span>金鸡湖景区望湖角/月光码头一带</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>望湖角栈桥走出去，两边都出片</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>17:00-17:30日落光线最好，在湖边站着就够</div>
+      <div class="info-row"><span class="info-tag warn-tag">避雷</span>天气不好就不值得专门来，提前查好天气</div>
+    </div>
+    <div class="transit-row">李公堤附近吃晚饭，打车回酒店</div>
+    <div class="stop-card">
+      <div class="stop-dot"></div>
+      <div class="stop-time">18:30 之后</div>
+      <div class="stop-name">李公堤晚饭</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>湖边餐厅选择多，随便坐</div>
+    </div>
+  </div>
+</div>
+
+<!-- Day 3 -->
+<div class="section" id="day3">
+  <div class="section-head"><div class="day-badge">03</div><div><div class="section-title">上海 · 水族馆 + 外滩 + 城隍庙</div></div></div>
+  <div class="section-sub">轻装包出发，行李箱留苏州，水族馆→外滩等亮灯→城隍庙夜逛</div>
+  <div class="transport-box">
+    <h3>🚄 早上：苏州 → 上海（建议9:00前出发）</h3>
+    <div class="t-step"><div class="t-icon">1</div><div>打车到苏州站，高铁到<strong>上海站</strong>（约25-30分钟，29-50元）</div></div>
+    <div class="t-step"><div class="t-icon">2</div><div>上海站→陆家嘴：地铁<span class="t-badge">4号线</span>到世纪大道换<span class="t-badge">2号线</span>到陆家嘴站（约30分钟）</div></div>
+  </div>
+  <div class="stop-list">
+    <div class="stop-card">
+      <div class="stop-dot rust"></div>
+      <div class="stop-time">10:30 — 13:00</div>
+      <div class="stop-name">上海海洋水族馆<a class="map-btn" href="https://surl.amap.com/TBgiBjv1dXTa" target="_blank">📍高德</a></div>
+      <div class="info-row"><span class="info-tag">地址</span>浦东新区陆家嘴环路1388号</div>
+      <div class="info-row"><span class="info-tag">交通</span>地铁<span class="t-badge">2号线</span>陆家嘴站2号口，步行约5分钟</div>
+      <div class="info-row"><span class="info-tag">费用</span>约160-200元/人，提前美团/官网买</div>
+      <div class="info-row"><span class="info-tag warn-tag">避雷</span>现场买贵且排队，提前买好电子票</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>海底隧道最值得慢慢走，预留2-2.5小时</div>
+    </div>
+    <div class="transit-row">沿江步行约15分钟到外滩</div>
+    <div class="stop-card">
+      <div class="stop-dot rust"></div>
+      <div class="stop-time">13:30 — 19:00</div>
+      <div class="stop-name">外滩（等19:00亮灯）<a class="map-btn" href="https://surl.amap.com/TBgiBjv1dXTy" target="_blank">📍高德</a></div>
+      <div class="info-row"><span class="info-tag">地址</span>黄浦区中山东一路沿江步道</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>19:00建筑群亮灯，提前在对面等着</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>午饭在南京路附近解决，不用走远</div>
+    </div>
+    <div class="transit-row">亮灯后打车约10分钟去城隍庙</div>
+    <div class="stop-card">
+      <div class="stop-dot navy"></div>
+      <div class="stop-time">19:30 — 21:30</div>
+      <div class="stop-name">城隍庙 · 豫园商圈（夜游）<a class="map-btn" href="https://surl.amap.com/TBgiBjv1dXTx" target="_blank">📍高德</a></div>
+      <div class="info-row"><span class="info-tag">地址</span>黄浦区福佑路168号附近商圈</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>商圈免费逛，不用进豫园，九曲桥灯光最出片</div>
+      <div class="info-row"><span class="info-tag warn-tag">避雷</span>商圈游客价，吃之前看好价格</div>
+    </div>
+  </div>
+  <div style="padding:14px 0 0;">
+    <div class="option-block">
+      <h4><span class="opt-badge">方案A</span> 高铁回苏州</h4>
+      <div class="opt-step"><div class="opt-num">1</div><div>地铁<span class="t-badge">10号线</span>/<span class="t-badge">14号线</span>豫园站→换<span class="t-badge">2号线</span>到上海站（约20分钟）</div></div>
+      <div class="opt-step"><div class="opt-num">2</div><div>高铁回苏州约25-30分钟，末班约22:00，21:30前出发最稳</div></div>
+    </div>
+    <div class="option-block">
+      <h4><span class="opt-badge">方案B</span> 顺风车直接回苏州</h4>
+      <div class="opt-step"><div class="opt-num">1</div><div>高德/滴滴叫顺风车直接回苏州，约1-1.5小时，约100-150元</div></div>
+      <div class="opt-step"><div class="opt-num">2</div><div>不用赶高铁，可以玩到21:30-22:00再走</div></div>
+      <div class="note-box">💡 两人split顺风车费更划算，还省去抢高铁票的麻烦</div>
+    </div>
+  </div>
+</div>
+
+<!-- Day 4 -->
+<div class="section" id="day4">
+  <div class="section-head"><div class="day-badge gold">04</div><div><div class="section-title">上海 · 武康路安福路</div></div></div>
+  <div class="section-sub">今天退房，带行李去上海，存好后轻装逛，逛完各自返程</div>
+  <div class="transport-box">
+    <h3>🚄 早上：苏州退房 → 带行李出发</h3>
+    <div class="t-step"><div class="t-icon">1</div><div>今天退房，行李带上高铁去上海</div></div>
+    <div class="t-step"><div class="t-icon">2</div><div>苏州站 → 上海，约25分钟</div></div>
+    <div class="t-step"><div class="t-icon">3</div><div>到上海后先存行李（见下方行李方案），轻装出发</div></div>
+  </div>
+  <div class="stop-list">
+    <div class="stop-card">
+      <div class="stop-dot gold"></div>
+      <div class="stop-time">10:00 — 11:30</div>
+      <div class="stop-name">武康大楼<a class="map-btn" href="https://surl.amap.com/6UqXpHK2c3Td" target="_blank">📍高德</a></div>
+      <div class="info-row"><span class="info-tag">地址</span>徐汇区淮海中路1850号</div>
+      <div class="info-row"><span class="info-tag">交通</span>地铁<span class="t-badge">9号线</span>嘉善路站，步行约10分钟</div>
+      <div class="info-row"><span class="info-tag warn-tag">避雷</span>门口密丰咖啡不值得排</div>
+      <div class="info-row"><span class="info-tag warn-tag">避雷</span>周末下午人太多，上午来才对</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>最佳机位：对面斑马线往回走30米，楼在梧桐树中间</div>
+    </div>
+    <div class="transit-row">沿武康路步行约15分钟顺路过去</div>
+    <div class="stop-card">
+      <div class="stop-dot gold"></div>
+      <div class="stop-time">11:30 — 14:30</div>
+      <div class="stop-name">安福路<a class="map-btn" href="https://surl.amap.com/6UqXpKk2c3Te" target="_blank">📍高德</a></div>
+      <div class="info-row"><span class="info-tag">地址</span>徐汇区安福路（武康路交叉口至常熟路）</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>Manner、Seesaw、Birds of Paradise花园茶都在这</div>
+      <div class="info-row"><span class="info-tag warn-tag">避雷</span>话剧艺术中心附近拍照馆门口好看进去性价比低</div>
+    </div>
+    <div class="transit-row">打车约15分钟</div>
+    <div class="stop-card">
+      <div class="stop-dot gold"></div>
+      <div class="stop-time">15:30 — 18:00</div>
+      <div class="stop-name">新天地<a class="map-btn" href="https://surl.amap.com/6UqXpJK2c3Tf" target="_blank">📍高德</a></div>
+      <div class="info-row"><span class="info-tag">地址</span>黄浦区太仓路181弄</div>
+      <div class="info-row"><span class="info-tag">交通</span>地铁<span class="t-badge">10号线</span>/<span class="t-badge">13号线</span>新天地站1号口出</div>
+      <div class="info-row"><span class="info-tag good-tag">推荐</span>最后一顿饭在这吃，石库门建筑氛围好</div>
+      <div class="info-row"><span class="info-tag warn-tag">避雷</span>网红餐厅分量少价格高，吃点心甜品更划算</div>
+      <div class="note-box">吃完饭取行李，各自返程。见下方行李方案。</div>
+    </div>
+  </div>
+</div>
+
+<!-- 行李方案 -->
+<div class="luggage-section" id="luggage">
+  <h2>🧳 Day4 行李方案（2选1）</h2>
+  <div class="lsub">苏州退房，行李带到上海存好，逛完各自回。</div>
+  <div class="lug-option">
+    <h3><span class="lug-badge">方案A</span> 存南京东路，各自走</h3>
+    <ul class="lug-steps">
+      <li><div class="lug-num">1</div><div>高铁到上海站，打车去南京东路存行李</div></li>
+      <li><div class="lug-num">2</div><div>轻装逛武康路→安福路→新天地吃晚饭</div></li>
+      <li><div class="lug-num">3</div><div>晚饭后分开：飞PVG→取行李→地铁2号线龙阳路→磁浮/打车去PVG；坐高铁→取行李→地铁去上海站</div></li>
+    </ul>
+    <div class="store-box">
+      <div class="store-title">📍 南京东路行李寄存（途简单平台）</div>
+      <div class="store-row"><span class="s-tag">位置</span>南京东路地铁站5号口出约50米</div>
+      <div class="store-row"><span class="s-tag">时间</span>09:00 — 21:00</div>
+      <div class="store-row"><span class="s-tag">费用</span>背包10元/天 · 行李箱20元/天</div>
+      <div class="store-row"><span class="s-tag">预约</span>微信搜"途简单"小程序提前预约</div>
+    </div>
+  </div>
+  <div class="lug-option">
+    <h3><span class="lug-badge rec">方案B</span> 存虹桥，一起取再分开 ✅ 推荐</h3>
+    <ul class="lug-steps">
+      <li><div class="lug-num">1</div><div>高铁坐到上海虹桥站，行李存T2站内</div></li>
+      <li><div class="lug-num">2</div><div>轻装逛武康路→安福路→新天地吃晚饭</div></li>
+      <li><div class="lug-num">3</div><div>晚饭后一起回虹桥取行李：飞PVG→市域机场线40分钟直达（26元）；坐高铁→虹桥直接出发</div></li>
+    </ul>
+    <div class="store-box">
+      <div class="store-title">📍 虹桥火车站行李寄存（存知己平台）</div>
+      <div class="store-row"><span class="s-tag">位置</span>虹桥T2出站层，西出口约300米</div>
+      <div class="store-row"><span class="s-tag">时间</span>06:00 — 22:00</div>
+      <div class="store-row"><span class="s-tag">费用</span>背包10元/天 · 行李箱20元/天</div>
+      <div class="store-row"><span class="s-tag">优点</span>两人同一个取行李点，收尾最干净</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tips -->
+<div class="tips-section" id="tips">
+  <h2>出发前必读</h2>
+  <div class="tip-grid">
+    <div class="tip-card">
+      <h4>📱 提前装好的App</h4>
+      <ul>
+        <li>高德地图 — 导航+打车（中国无法用谷歌地图）</li>
+        <li>12306 — 买高铁票，用护照注册</li>
+        <li>支付宝 / 微信 — 绑好外卡</li>
+        <li>途简单 / 存知己 — 微信搜索，行李寄存预约</li>
+      </ul>
+    </div>
+    <div class="tip-card warn">
+      <h4>⚠️ 新加坡入境须知</h4>
+      <ul>
+        <li>新加坡护照入境中国免签15天，入境卡填好行程</li>
+        <li>高铁/地铁买票用护照，不是IC卡，随身带着</li>
+        <li>Google/WhatsApp在中国用不了，出发前在新加坡下好VPN</li>
+      </ul>
+    </div>
+    <div class="tip-card">
+      <h4>🚄 苏州↔上海高铁</h4>
+      <ul>
+        <li>全程约25-30分钟，约29-50元</li>
+        <li>周末建议提前2天买</li>
+        <li>末班回苏州约22:00，Day3不要玩太晚</li>
+      </ul>
+    </div>
+    <div class="tip-card warn">
+      <h4>❌ 通用避雷</h4>
+      <ul>
+        <li>景区门口不要买伴手礼，进去再买</li>
+        <li>高铁票提前买，别到了再排队</li>
+        <li>苏州寄存柜旺季会满，用途简单提前预约</li>
+        <li>上海外滩节假日可能封路，工作日去或提前查</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="footer">沪苏四日手册 · 高德链接在中国境内打开可直接导航</div>
+
+</div><!-- end handbook -->
+
+<!-- ════════════════════════════════════
+     PAGE 2: MAP
+════════════════════════════════════ -->
+<div class="page" id="mapview">
+  <div class="map-header">
+    <h2>苏州 + 上海 · 四日路线地图</h2>
+    <span>OpenStreetMap · 新加坡规划用</span>
+  </div>
+  <div class="day-tabs">
+    <div class="day-tab on" onclick="switchDay(0)">D1 古城</div>
+    <div class="day-tab" onclick="switchDay(1)">D2 森林+湖</div>
+    <div class="day-tab" onclick="switchDay(2)">D3 水族+外滩</div>
+    <div class="day-tab" onclick="switchDay(3)">D4 武康</div>
+  </div>
+  <div id="map"></div>
+  <div class="map-stops" id="mapstops"></div>
+  <div class="map-footer">OpenStreetMap · 到中国后请用高德地图导航</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// Page switching
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  document.querySelectorAll('.page-tab').forEach((t,i) => {
+    if (['handbook','mapview'][i] === id) t.classList.add('on');
+  });
+  if (id === 'mapview' && !mapReady) initMap();
+}
+
+// Map data
+const mapDays = [
+  { center:[31.300,120.620], zoom:14, color:'#2d5a47',
+    stops:[
+      { name:'隐工匠手作（蓝·芳华店）', lat:31.2838, lng:120.6261, time:'14:30 — 16:30',
+        notes:['📍 人民路200号蓝·芳华创意园25幢307','地铁4号线2a口步行400米'],
+        good:['陶艺最容易上手，做完可邮寄'], warn:['必须提前预约，不接受walk-in'],
+        transit:'步行25分钟 / 打车约10元' },
+      { name:'平江路历史街区', lat:31.3131, lng:120.6348, time:'17:00 — 20:00',
+        notes:['📍 姑苏区平江路（相门地铁站旁）'],
+        good:['19:00灯笼亮起最好拍','晚饭：朱鸿兴苏式面/哑巴生煎'],
+        warn:['主街纪念品店，走侧面小巷才值得逛'], transit:null }
+    ]
+  },
+  { center:[31.29,120.65], zoom:12, color:'#c4963a',
+    stops:[
+      { name:'苏州乐园森林世界（园内）', lat:31.2640, lng:120.5760, time:'10:00 — 14:00',
+        notes:['📍 吴中区石湖西路288号','地铁1号线木渎站→打车10分钟'],
+        good:['热带雨林区+鸟巢区出片','提前美团买票'],
+        warn:['周末排队长，建议工作日去'], transit:'打车约25分钟去金鸡湖，约25元' },
+      { name:'金鸡湖环湖步道', lat:31.3070, lng:120.7040, time:'15:30 — 17:30',
+        notes:['📍 金鸡湖景区望湖角/月光码头'],
+        good:['望湖角栈桥两边都出片','17:00-17:30日落最好'],
+        warn:['天气不好就不值得来，提前查天气'], transit:'李公堤吃晚饭，打车回酒店' },
+      { name:'李公堤晚饭', lat:31.3148, lng:120.7010, time:'18:30 之后',
+        notes:['📍 金鸡湖李公堤街区'], good:['湖边餐厅多，随便坐'], warn:[], transit:null }
+    ]
+  },
+  { center:[31.234,121.495], zoom:14, color:'#b84c2c',
+    stops:[
+      { name:'上海海洋水族馆', lat:31.2418, lng:121.5057, time:'10:30 — 13:00',
+        notes:['📍 浦东新区陆家嘴环路1388号','地铁2号线陆家嘴站2号口步行5分钟'],
+        good:['海底隧道最值得慢慢走，预留2-2.5小时'],
+        warn:['提前买电子票，现场贵且排队'], transit:'沿江步行约15分钟到外滩' },
+      { name:'外滩（等19:00亮灯）', lat:31.2404, lng:121.4906, time:'13:30 — 19:00',
+        notes:['📍 黄浦区中山东一路沿江步道'],
+        good:['19:00建筑群亮灯，提前到位等','午饭在南京路附近解决'], warn:[],
+        transit:'亮灯后打车约10分钟' },
+      { name:'城隍庙·豫园商圈（夜游）', lat:31.2274, lng:121.4921, time:'19:30 — 21:30',
+        notes:['📍 黄浦区福佑路168号附近'],
+        good:['免费逛商圈，不用进豫园','九曲桥灯光最出片'],
+        warn:['商圈游客价，吃前看好价格'], transit:'方案A：地铁→上海站高铁回苏州 / 方案B：顺风车直达苏州' }
+    ]
+  },
+  { center:[31.215,121.450], zoom:15, color:'#c4963a',
+    stops:[
+      { name:'武康大楼', lat:31.2045, lng:121.4383, time:'10:00 — 11:30',
+        notes:['📍 徐汇区淮海中路1850号','地铁9号线嘉善路站步行10分钟'],
+        good:['最佳机位：对面斑马线往回走30米'],
+        warn:['密丰咖啡不值得排','周末下午人太多，上午来'], transit:'沿武康路步行约15分钟' },
+      { name:'安福路', lat:31.2142, lng:121.4444, time:'11:30 — 14:30',
+        notes:['📍 徐汇区安福路'],
+        good:['Manner、Seesaw、Birds of Paradise都在这'],
+        warn:['话剧艺术中心附近拍照馆性价比低'], transit:'打车约15分钟' },
+      { name:'新天地', lat:31.2196, lng:121.4753, time:'15:30 — 18:00',
+        notes:['📍 黄浦区太仓路181弄','地铁10/13号线新天地站1号口'],
+        good:['最后一顿饭在这吃，石库门氛围好'],
+        warn:['网红餐厅贵量少，吃点心更划算'], transit:'取行李返程（见行李方案）' }
+    ]
+  }
+];
+
+let map = null, markers = [], mapReady = false, currentDay = 0;
+
+function getIcon(num, color) {
+  return L.divIcon({
+    className:'',
+    html:`<div style="width:26px;height:26px;background:${color};border:2.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;box-shadow:0 2px 5px rgba(0,0,0,.3);font-family:sans-serif;">${num}</div>`,
+    iconSize:[26,26], iconAnchor:[13,13], popupAnchor:[0,-15]
+  });
+}
+
+function renderMapStops(idx) {
+  const day = mapDays[idx];
+  const c = document.getElementById('mapstops');
+  c.innerHTML = '';
+  day.stops.forEach((s,i) => {
+    const row = document.createElement('div');
+    row.className = 'mstop-row';
+    const metas = [
+      ...s.notes.map(n=>`<span class="n">${n}</span>`),
+      ...s.good.map(g=>`<span class="g">✅ ${g}</span>`),
+      ...s.warn.map(w=>`<span class="w">⚠️ ${w}</span>`)
+    ].join('');
+    row.innerHTML = `<div class="mpin" style="background:${day.color}">${i+1}</div>
+      <div><div class="mstop-name">${s.name}</div><div class="mstop-time">${s.time}</div><div class="mstop-meta">${metas}</div></div>`;
+    c.appendChild(row);
+    if (s.transit) {
+      const t = document.createElement('div');
+      t.className = 'mtransit';
+      t.textContent = s.transit;
+      c.appendChild(t);
+    }
+  });
+}
+
+function switchDay(idx) {
+  currentDay = idx;
+  document.querySelectorAll('.day-tab').forEach((t,i) => t.classList.toggle('on', i===idx));
+  if (!map) return;
+  const day = mapDays[idx];
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+  map.setView(day.center, day.zoom);
+  day.stops.forEach((s,i) => {
+    const m = L.marker([s.lat,s.lng], {icon:getIcon(i+1,day.color)})
+      .addTo(map)
+      .bindPopup(`<b>${s.name}</b><br><span style="font-size:11px;color:#666">${s.time}</span>`);
+    markers.push(m);
+  });
+  if (day.stops.length > 1) {
+    const line = L.polyline(day.stops.map(s=>[s.lat,s.lng]),
+      {color:day.color, weight:2.5, opacity:.7, dashArray:'6,5'}).addTo(map);
+    markers.push(line);
+  }
+  renderMapStops(idx);
+}
+
+function initMap() {
+  map = L.map('map', {zoomControl:true, attributionControl:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}).addTo(map);
+  L.control.attribution({prefix:'© <a href="https://openstreetmap.org">OpenStreetMap</a>'}).addTo(map);
+  mapReady = true;
+  switchDay(0);
+}
+</script>
+</body>
+</html>
