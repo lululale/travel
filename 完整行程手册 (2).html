@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>沪苏行程手册</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Noto+Serif+SC:wght@400;700;900&display=swap');
+:root{
+  --jade:#2d5a47;--jade2:#3d7a60;--rust:#b84c2c;--gold:#c4963a;--navy:#1a3a60;
+  --paper:#f7f3ec;--warm:#ede7d9;--ink:#1a1814;--muted:#7a7060;--line:#ddd5c0;--tag:#e8e0cc;
+  --alert:#b84c2c;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--warm);font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--ink);max-width:640px;margin:0 auto;padding-bottom:60px;}
+
+/* TOP TABS */
+.top-tabs{display:flex;background:#1a1814;position:sticky;top:0;z-index:300;}
+.top-tab{flex:1;padding:12px 2px;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.4);cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;white-space:nowrap;}
+.top-tab.on{color:#fff;border-bottom-color:var(--gold);}
+.pg{display:none;}
+.pg.on{display:block;}
+
+/* COVER */
+.cover{color:#fff;padding:32px 20px 24px;position:relative;overflow:hidden;}
+.cover::after{content:'';position:absolute;right:-30px;top:-30px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.05);}
+.cover h1{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:900;margin-bottom:5px;}
+.cover p{font-size:11px;opacity:.7;margin-bottom:10px;}
+.cover-tags{display:flex;flex-wrap:wrap;gap:6px;}
+.cover-tags span{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);border-radius:99px;padding:3px 10px;font-size:10px;}
+.cover.sz{background:var(--jade);}
+.cover.sh{background:var(--navy);}
+
+/* OVERVIEW TABLE */
+.ov-wrap{padding:16px 18px 0;}
+.ov-title{font-family:'Noto Serif SC',serif;font-size:14px;font-weight:700;color:var(--jade);margin-bottom:10px;}
+.ov-table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+.ov-table th{background:var(--jade);color:#fff;padding:7px 10px;font-size:10px;font-weight:700;text-align:left;}
+.ov-table td{padding:7px 10px;border-bottom:1px solid var(--line);font-size:11px;vertical-align:top;}
+.ov-table tr:last-child td{border-bottom:none;}
+.ov-day{font-weight:700;color:var(--rust);white-space:nowrap;}
+
+/* ALERT CARD */
+.alert-card{margin:12px 18px 0;background:#fff3cd;border-left:4px solid var(--gold);border-radius:0 8px 8px 0;padding:10px 13px;font-size:12px;color:#7a5a10;}
+.alert-card .al-head{font-weight:700;font-size:13px;margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+.alert-card.red{background:#fde8e2;border-color:var(--rust);color:#6a2010;}
+
+/* DEADLINE BOX */
+.deadline-box{margin:14px 18px 0;background:var(--rust);color:#fff;border-radius:10px;padding:13px 15px;}
+.deadline-box h3{font-size:12px;font-weight:700;margin-bottom:8px;color:#fde8e2;}
+.dl-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;}
+.dl-time{font-weight:900;font-size:14px;color:#fff;flex-shrink:0;width:50px;}
+.dl-desc{color:rgba(255,255,255,.9);}
+.dl-arrow{color:rgba(255,255,255,.5);flex-shrink:0;}
+
+/* SUBNAV */
+.subnav{position:sticky;top:41px;z-index:200;background:var(--warm);border-bottom:1px solid var(--line);display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.subnav::-webkit-scrollbar{display:none;}
+.subnav a{flex-shrink:0;padding:9px 12px;font-size:11px;font-weight:700;color:var(--muted);text-decoration:none;white-space:nowrap;border-bottom:2px solid transparent;}
+.subnav a:hover{color:var(--jade);border-color:var(--jade);}
+
+/* SECTION */
+.sec{padding:26px 18px 8px;border-bottom:6px solid var(--warm);}
+.sec-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:4px;}
+.dbadge{flex-shrink:0;width:33px;height:33px;background:var(--rust);color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Noto Serif SC',serif;font-weight:900;font-size:12px;}
+.dbadge.j{background:var(--jade);}
+.dbadge.g{background:var(--gold);}
+.dbadge.n{background:var(--navy);}
+.sec-title{font-family:'Noto Serif SC',serif;font-size:17px;font-weight:700;color:var(--jade);}
+.sec-sub{font-size:11px;color:var(--muted);margin:2px 0 14px;padding-left:43px;}
+
+/* STOPS */
+.scard{padding:12px 0 12px 40px;position:relative;border-left:2px dashed var(--line);margin-left:14px;}
+.scard:last-child{border-left-color:transparent;padding-bottom:2px;}
+.sdot{position:absolute;left:-6px;top:16px;width:10px;height:10px;background:var(--jade);border:2px solid var(--warm);border-radius:50%;}
+.sdot.r{background:var(--rust);}
+.sdot.g{background:var(--gold);}
+.sdot.n{background:var(--navy);}
+.stime{font-size:10px;font-weight:700;color:var(--rust);letter-spacing:.04em;margin-bottom:2px;}
+.sname{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;}
+.mbtn{display:inline-flex;align-items:center;gap:3px;background:var(--jade);color:#fff!important;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;text-decoration:none;}
+.row{display:flex;gap:5px;margin-bottom:5px;font-size:12px;color:#4a4236;}
+.tag{flex-shrink:0;background:var(--tag);color:var(--jade);font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;height:fit-content;margin-top:2px;}
+.tag.w{background:#fde8e2;color:var(--rust);}
+.tag.g{background:#e0f0e8;color:var(--jade);}
+.notebox{background:#fff8f0;border-left:3px solid var(--gold);padding:8px 11px;border-radius:0 7px 7px 0;font-size:11px;color:#5a4a30;margin-top:7px;}
+.trow{padding:5px 0 5px 40px;margin-left:14px;border-left:2px dashed var(--line);font-size:11px;color:var(--gold);font-weight:700;}
+.trow::before{content:'↓ ';}
+
+/* TRANSPORT BOX */
+.tbox{background:#f0f7f3;border:1px solid #c5ddd0;border-radius:9px;padding:11px 13px;margin:0 0 14px;}
+.tbox h3{font-size:11px;font-weight:700;color:var(--jade);margin-bottom:7px;}
+.tstep{display:flex;gap:6px;margin-bottom:5px;font-size:12px;color:#3a4a40;}
+.ticon{flex-shrink:0;width:18px;height:18px;background:var(--jade);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;margin-top:1px;}
+.lb{display:inline-block;background:var(--rust);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin:0 2px;}
+.lb.g{background:var(--jade);}
+
+/* TRAIN OPTIONS TABLE */
+.train-table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;margin:8px 0 4px;}
+.train-table th{background:var(--jade);color:#fff;font-size:10px;font-weight:700;padding:6px 8px;text-align:left;}
+.train-table td{padding:7px 8px;border-bottom:1px solid var(--line);font-size:11px;}
+.train-table tr:last-child td{border-bottom:none;}
+.train-table .rec{font-weight:700;color:var(--jade);}
+
+/* TOGGLE */
+.tgl-group{display:flex;gap:0;background:var(--tag);border-radius:8px;padding:3px;margin-bottom:10px;}
+.tgl-btn{flex:1;padding:6px 4px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;border-radius:6px;transition:all .15s;}
+.tgl-btn.on{background:#fff;color:var(--jade);box-shadow:0 1px 3px rgba(0,0,0,.1);}
+.tgl-c{display:none;}
+.tgl-c.on{display:block;}
+
+/* FOOD ACCORDION */
+.food-acc{margin-top:10px;border-radius:8px;overflow:hidden;border:1px solid var(--line);}
+.food-acc-head{background:var(--warm);padding:10px 13px;font-size:12px;font-weight:700;color:var(--jade);cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;}
+.food-acc-head::after{content:'▸';font-size:12px;color:var(--muted);transition:transform .2s;}
+.food-acc-head.open::after{transform:rotate(90deg);}
+.food-acc-body{display:none;background:#fff;padding:0;}
+.food-acc-body.open{display:block;}
+
+/* FOOD TABLE */
+.ftable{width:100%;border-collapse:collapse;}
+.ftable th{background:#f5f1e8;color:var(--jade);font-size:10px;font-weight:700;padding:6px 10px;text-align:left;border-bottom:1px solid var(--line);}
+.ftable td{padding:8px 10px;border-bottom:1px solid var(--line);font-size:11px;vertical-align:top;}
+.ftable tr:last-child td{border-bottom:none;}
+.ftable .fn{font-weight:700;color:var(--ink);}
+.ftable .fd{color:var(--muted);font-size:10px;margin-top:2px;}
+.badge-yes{background:#e0f0e8;color:var(--jade);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;}
+.badge-no{background:var(--tag);color:var(--muted);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;}
+.badge-warn{background:#fde8e2;color:var(--rust);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;}
+
+/* OPT BLOCK */
+.opt-block{border-radius:9px;border:1px solid var(--line);padding:12px;margin-bottom:10px;background:var(--warm);}
+.opt-block h4{font-size:11px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:7px;color:var(--ink);}
+.opt-badge{background:var(--gold);color:#fff;font-size:9px;font-weight:900;padding:2px 7px;border-radius:4px;}
+.opt-step{display:flex;gap:6px;margin-bottom:5px;font-size:12px;color:#4a4236;}
+.opt-num{flex-shrink:0;width:16px;height:16px;background:var(--jade);color:#fff;border-radius:50%;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+
+/* LUGGAGE */
+.lug-sec{background:var(--jade);color:var(--paper);padding:24px 18px;}
+.lug-sec h2{font-family:'Noto Serif SC',serif;font-size:16px;font-weight:700;color:var(--gold);margin-bottom:3px;}
+.lsub{font-size:11px;color:rgba(247,243,236,.6);margin-bottom:14px;}
+.lug-opt{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:13px;margin-bottom:11px;}
+.lug-opt h3{font-size:12px;font-weight:700;color:#fff;margin-bottom:8px;display:flex;align-items:center;gap:7px;}
+.lbadge{background:var(--gold);color:#fff;font-size:9px;font-weight:900;padding:2px 7px;border-radius:4px;}
+.lbadge.rec{background:var(--navy);}
+.lug-steps{list-style:none;display:grid;gap:5px;}
+.lug-steps li{display:flex;gap:7px;font-size:12px;color:rgba(247,243,236,.85);}
+.lnum{flex-shrink:0;width:16px;height:16px;background:rgba(255,255,255,.15);color:#fff;border-radius:50%;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+.store-box{background:rgba(255,255,255,.06);border-radius:7px;padding:10px;margin-top:9px;}
+.store-title{font-size:11px;font-weight:700;color:var(--gold);margin-bottom:6px;}
+.store-row{font-size:11px;color:rgba(247,243,236,.75);margin-bottom:3px;display:flex;gap:5px;}
+.st{flex-shrink:0;background:rgba(196,150,58,.28);color:var(--gold);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;height:fit-content;}
+
+/* FOOD PAGE */
+.food-pg{padding:14px 18px 30px;}
+.food-pg h2{font-family:'Noto Serif SC',serif;font-size:16px;font-weight:700;color:var(--jade);margin-bottom:4px;}
+.food-pg .fsub{font-size:11px;color:var(--muted);margin-bottom:16px;}
+.food-section{margin-bottom:20px;}
+.food-section-title{font-size:13px;font-weight:700;color:var(--jade);padding:8px 0 8px;border-bottom:2px solid var(--jade);margin-bottom:10px;display:flex;align-items:center;gap:7px;}
+.food-card{background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:8px;}
+.food-card-head{padding:10px 13px 8px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;border-bottom:1px solid var(--line);}
+.fc-name{font-weight:700;font-size:13px;color:var(--ink);}
+.fc-type{font-size:10px;color:var(--muted);margin-top:1px;}
+.fc-price{font-size:12px;font-weight:700;color:var(--jade);white-space:nowrap;}
+.food-meta{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.fm-item{padding:6px 13px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);}
+.fm-item:nth-child(even){border-right:none;}
+.fm-item:nth-last-child(-n+2){border-bottom:none;}
+.fm-label{font-size:9px;color:var(--muted);margin-bottom:2px;font-weight:700;text-transform:uppercase;}
+.fm-val{font-size:11px;color:var(--ink);}
+.food-note{padding:7px 13px;font-size:11px;background:#f5f1e8;color:#5a4a30;}
+
+/* TIPS */
+.tips-sec{padding:24px 18px 36px;background:var(--warm);}
+.tips-sec h2{font-family:'Noto Serif SC',serif;font-size:16px;font-weight:700;color:var(--jade);margin-bottom:14px;}
+.tip-grid{display:grid;gap:10px;}
+.tip-card{background:#fff;border-radius:9px;padding:12px 14px;border-left:4px solid var(--jade);}
+.tip-card h4{font-size:12px;font-weight:700;color:var(--jade);margin-bottom:6px;}
+.tip-card ul{list-style:none;display:grid;gap:4px;}
+.tip-card li{font-size:12px;color:#4a4236;padding-left:12px;position:relative;}
+.tip-card li::before{content:'·';position:absolute;left:0;color:var(--gold);font-weight:900;font-size:15px;top:-2px;}
+.tip-card.warn{border-color:var(--rust);}
+.tip-card.warn h4{color:var(--rust);}
+
+/* SOS BOX */
+.sos-box{background:#1a1814;border-radius:10px;padding:13px 15px;margin-top:12px;}
+.sos-box h4{font-size:12px;font-weight:700;color:var(--gold);margin-bottom:10px;}
+.sos-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.1);font-size:12px;}
+.sos-row:last-child{border-bottom:none;}
+.sos-label{color:rgba(255,255,255,.7);}
+.sos-num{color:#fff;font-weight:700;}
+
+/* MAP */
+.map-header{background:var(--jade);padding:10px 15px 8px;display:flex;justify-content:space-between;align-items:center;}
+.map-header h2{font-size:12px;font-weight:700;color:#f5f0e6;margin:0;}
+.map-header span{font-size:10px;color:rgba(245,240,230,.55);}
+.dtabs{display:flex;background:#e8e1d0;border-bottom:2px solid #d4c8b0;overflow-x:auto;}
+.dtabs::-webkit-scrollbar{display:none;}
+.dtab{flex-shrink:0;padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#7a7060;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;}
+.dtab.on{color:var(--jade);border-bottom-color:var(--jade);background:#f5f0e6;}
+#map{height:290px;width:100%;}
+.mstops{padding:8px 13px 0;}
+.mrow{display:flex;gap:7px;padding:7px 0;border-bottom:1px solid #e0d8c8;align-items:flex-start;}
+.mrow:last-child{border-bottom:none;}
+.mpin{flex-shrink:0;width:21px;height:21px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:1px;}
+.mname{font-size:12px;font-weight:700;color:#1a1814;margin-bottom:1px;}
+.mtime{font-size:10px;color:#9a9080;margin-bottom:2px;}
+.mmeta{font-size:11px;display:flex;flex-direction:column;gap:2px;}
+.mmeta .w{color:var(--rust);}
+.mmeta .g{color:var(--jade);}
+.mmeta .n{color:#7a7060;}
+.mtrans{padding:3px 0 3px 28px;font-size:11px;color:var(--gold);font-weight:600;}
+.mtrans::before{content:'↓ ';}
+.map-foot{padding:7px 13px 10px;font-size:10px;color:#9a9080;text-align:center;background:#f5f0e6;}
+.footer{text-align:center;padding:16px;font-size:10px;color:var(--muted);background:var(--warm);border-top:1px solid var(--line);}
+</style>
+</head>
+<body>
+
+<div class="top-tabs">
+  <div class="top-tab on" onclick="showPg('itin')">📋 行程</div>
+  <div class="top-tab" onclick="showPg('food')">🍜 餐厅</div>
+  <div class="top-tab" onclick="showPg('mapview');initMap()">🗺️ 地图</div>
+  <div class="top-tab" onclick="showPg('tips')">✅ 须知</div>
+</div>
+
+<!-- ══ PAGE 1: ITINERARY ══ -->
+<div class="pg on" id="itin">
+
+<div class="cover sz">
+  <h1>苏州 · 上海 手册</h1>
+  <p>玉山南出发 · 苏州住3晚 · 上海当天往返</p>
+  <div class="cover-tags">
+    <span>✈️ SIN→PVG→苏州</span>
+    <span>🦈 上海海洋水族馆</span>
+    <span>📸 汉服妆造约拍</span>
+    <span>🌅 金鸡湖日落</span>
+    <span>🚄 17:38虹桥返程</span>
+  </div>
+</div>
+
+<div class="ov-wrap">
+  <div class="ov-title">📅 行程总览</div>
+  <table class="ov-table">
+    <thead><tr><th>天</th><th>地点</th><th>主要内容</th></tr></thead>
+    <tbody>
+      <tr><td><div class="ov-day">D0 10/7</div></td><td>新加坡</td><td>19:00樟宜T4 → 23:45飞PVG</td></tr>
+      <tr><td><div class="ov-day">D1 11/7</div></td><td>苏州</td><td>07:00出发PVG→虹桥→高铁苏州 → 13:00接ZZY → 入住 → 随便逛</td></tr>
+      <tr><td><div class="ov-day">D2 12/7</div></td><td>上海</td><td>水族馆12:00 → 南京路逛 → 17:20外滩 → 19:00亮灯 → 城隍庙optional → 23:40高铁回</td></tr>
+      <tr><td><div class="ov-day">D3 13/7</div></td><td>苏州</td><td>10:00亭芳阁妆造 → 13:00约拍 → 17:30金鸡湖 → 李公堤晚饭</td></tr>
+      <tr><td><div class="ov-day">D4 14/7</div></td><td>上海→玉山</td><td>退房 → 武康大楼 → 安福路/新天地 → ⚠️16:45取行李 → 17:38虹桥出发</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<nav class="subnav">
+  <a href="#d0">D0 出发</a>
+  <a href="#d1">D1 抵达</a>
+  <a href="#d2">D2 上海</a>
+  <a href="#d3">D3 妆造</a>
+  <a href="#d4">D4 返程</a>
+  <a href="#luggage">🧳 行李</a>
+</nav>
+
+<!-- D0 -->
+<div class="sec" id="d0">
+  <div class="sec-head"><div class="dbadge n">D0</div><div><div class="sec-title">出发 · 新加坡 → 上海</div></div></div>
+  <div class="sec-sub">Fri 10/7 · 樟宜T4出发，落地PVG T2</div>
+  <div class="scard">
+    <div class="sdot n"></div>
+    <div class="stime">19:00</div>
+    <div class="sname">樟宜机场 T4 · Check-in</div>
+    <div class="row"><span class="tag">提醒</span>护照、12306买好的高铁票电子版、支付宝/微信确认可用</div>
+  </div>
+  <div class="trow">飞行约5小时</div>
+  <div class="scard">
+    <div class="sdot n"></div>
+    <div class="stime">23:45</div>
+    <div class="sname">起飞 → 上海浦东 T2（PVG）</div>
+    <div class="row"><span class="tag">落地</span>次日约05:00-06:00落地</div>
+  </div>
+</div>
+
+<!-- D1 -->
+<div class="sec" id="d1">
+  <div class="sec-head"><div class="dbadge">D1</div><div><div class="sec-title">抵达苏州 · Sat 11/7</div></div></div>
+  <div class="sec-sub">07:00出关行李到手，直奔虹桥坐高铁去苏州</div>
+
+  <div class="tbox">
+    <h3>🚇 PVG T2 → 虹桥火车站（地铁2号线）</h3>
+    <div class="tstep"><div class="ticon">1</div><div>地铁<span class="lb">2号线</span>，PVG T2站上车，方向"徐泾东"，全程16站，约60分钟，约¥7</div></div>
+    <div class="tstep"><div class="ticon">2</div><div>虹桥火车站站下车，步行约<b>300m</b>到高铁候车厅，约08:00到虹桥</div></div>
+  </div>
+
+  <div class="scard">
+    <div class="sdot r"></div>
+    <div class="stime">07:00 出发</div>
+    <div class="sname">浦东机场 PVG T2<a class="mbtn" href="https://uri.amap.com/search?keyword=浦东国际机场&city=上海" target="_blank">📍高德</a></div>
+    <div class="row"><span class="tag w">注意</span>T1/T2分清，国际航班在T2，地铁2号线也在T2</div>
+    <div class="row"><span class="tag">提醒</span>出关后确认支付宝/微信可以正常付款</div>
+  </div>
+  <div class="trow">地铁2号线约60分钟 → 虹桥约08:00到</div>
+  <div class="scard">
+    <div class="sdot"></div>
+    <div class="stime">约08:00 到虹桥</div>
+    <div class="sname">虹桥火车站 → 苏州站（选一班）</div>
+    <table class="train-table">
+      <thead><tr><th>班次</th><th>出发</th><th>到达</th><th>时长</th><th>价格</th></tr></thead>
+      <tbody>
+        <tr><td class="rec">✅ 首选</td><td class="rec">08:22</td><td class="rec">08:53</td><td>31分</td><td>¥29起</td></tr>
+        <tr><td>备选</td><td>08:42</td><td>09:13</td><td>31分</td><td>¥29起</td></tr>
+        <tr><td>再备</td><td>09:10</td><td>09:43</td><td>33分</td><td>¥29起</td></tr>
+      </tbody>
+    </table>
+    <div class="notebox">⚠️ 班次以12306 App实际为准，虹桥→苏州每10-20分钟一班，赶不上就等下一班</div>
+  </div>
+  <div class="trow">苏州站出站步行约304m到桔子酒店，约4-5分钟</div>
+  <div class="scard">
+    <div class="sdot"></div>
+    <div class="stime">约09:30-10:30 到酒店</div>
+    <div class="sname">桔子酒店（苏州火车站店）<a class="mbtn" href="https://uri.amap.com/search?keyword=苏州站火车站&city=苏州" target="_blank">📍高德</a></div>
+    <div class="row"><span class="tag">步行</span>苏州站出站→步行约304m，约4-5分钟</div>
+    <div class="row"><span class="tag">提醒</span>放行李，洗漱，休息，不用赶着出门</div>
+    <div class="row"><span class="tag w">注意</span>接ZZY前预留足够时间，最晚13:00出发去苏州北站</div>
+  </div>
+  <div class="trow">打车去苏州北站，约30-35分钟，约¥40-55</div>
+  <div class="scard">
+    <div class="sdot"></div>
+    <div class="stime">13:00 出发接人</div>
+    <div class="sname">苏州北站（接ZZY）<a class="mbtn" href="https://uri.amap.com/search?keyword=苏州北站&city=苏州" target="_blank">📍高德</a></div>
+    <div class="row"><span class="tag">ZZY到站</span>14:35到苏州北站</div>
+    <div class="row"><span class="tag">交通</span>打车到苏州北站约30-35分钟，建议13:00出发留buffer</div>
+  </div>
+  <div class="trow">一起打车回桔子酒店，约30-35分钟</div>
+  <div class="scard">
+    <div class="sdot"></div>
+    <div class="stime">约16:00 回到酒店</div>
+    <div class="sname">回酒店 · 洗漱休息</div>
+  </div>
+  <div class="trow">随便逛，不赶时间</div>
+  <div class="scard">
+    <div class="sdot g"></div>
+    <div class="stime">晚上 · 随便</div>
+    <div class="sname">山塘街 或 平江路 · 随便逛逛</div>
+    <div class="row"><span class="tag">山塘街</span>地铁<span class="lb g">4号线</span>山塘街站出站即到 / 打车约10-20分钟</div>
+    <div class="row"><span class="tag">平江路</span>地铁<span class="lb g">4号线</span>相门站出站即到 / 打车约10-15分钟</div>
+    <div class="row"><span class="tag g">推荐</span>19:00灯笼亮起后最好拍，两条街都有河道夜景</div>
+    <!-- Food accordion D1 -->
+    <div class="food-acc">
+      <div class="food-acc-head" onclick="toggleAcc(this)">🍜 D1 晚饭/宵夜选项</div>
+      <div class="food-acc-body">
+        <table class="ftable">
+          <thead><tr><th>店名</th><th>类型</th><th>预约</th><th>排队</th><th>人均</th></tr></thead>
+          <tbody>
+            <tr><td><div class="fn">同得兴（十全街）</div><div class="fd">十全街624号 · 营业07:00-13:00</div></td><td>苏式面老字号</td><td><span class="badge-no">不需要</span></td><td><span class="badge-warn">高峰要排</span></td><td>¥40-60</td></tr>
+            <tr><td><div class="fn">朱鸿兴（宫巷店）</div><div class="fd">宫巷附近 · 老字号</div></td><td>苏式面</td><td><span class="badge-no">不需要</span></td><td><span class="badge-no">一般不长</span></td><td>¥30-50</td></tr>
+            <tr><td><div class="fn">哑巴生煎</div><div class="fd">观前街/平江路附近</div></td><td>生煎包</td><td><span class="badge-no">不需要</span></td><td><span class="badge-no">一般不长</span></td><td>¥20-30</td></tr>
+            <tr><td><div class="fn">鱼食饭稻</div><div class="fd">平江路68号</div></td><td>苏帮菜土灶</td><td><span class="badge-no">不需要</span></td><td><span class="badge-warn">约等20分钟</span></td><td>¥70-80</td></tr>
+            <tr><td><div class="fn">平江路/山塘街沿街小吃</div><div class="fd">桂花糕·糖粥·蟹壳黄</div></td><td>小吃</td><td><span class="badge-no">不需要</span></td><td><span class="badge-no">无</span></td><td>¥10-20</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- D2 -->
+<div class="sec" id="d2">
+  <div class="sec-head"><div class="dbadge n">D2</div><div><div class="sec-title">上海 · 水族馆 + 外滩 · Sun 12/7</div></div></div>
+  <div class="sec-sub">轻装出发，行李留苏州，晚上高铁回</div>
+
+  <div class="alert-card">
+    <div class="al-head">⏰ K1506抢票提醒</div>
+    今天<b>14:45</b>准时打开12306抢 <b>23:40 K1506 → 苏州 00:40</b>（¥14.5）<br>
+    普通列车当天开售，抢不到备选 <b>22:23 G7212 → 苏州 22:52</b>（¥35，提前买）
+  </div>
+
+  <div class="tbox" style="margin-top:12px;">
+    <h3>🚄 早上：苏州站 → 上海站（建议10:00左右的车）</h3>
+    <div class="tstep"><div class="ticon">1</div><div>步行约<b>304m</b>到苏州站，约4-5分钟</div></div>
+    <div class="tstep"><div class="ticon">2</div><div>高铁约25-30分钟到上海站，¥29-50</div></div>
+    <div class="tstep"><div class="ticon">3</div><div>上海站→水族馆：地铁<span class="lb">4号线</span>2站到大连路→换<span class="lb">12号线</span>3站到陆家嘴，1号口出步行约<b>200m</b></div></div>
+  </div>
+
+  <div class="scard">
+    <div class="sdot n"></div>
+    <div class="stime">12:00</div>
+    <div class="sname">上海海洋水族馆<a class="mbtn" href="https://uri.amap.com/search?keyword=上海海洋水族馆&city=上海" target="_blank">📍高德</a></div>
+    <div class="row"><span class="tag">地址</span>浦东新区陆家嘴环路1388号</div>
+    <div class="row"><span class="tag">票价</span>成人¥160（官方价，美团/官网提前买约¥160），<b>出发前一天</b>在官网/美团买电子票</div>
+    <div class="row"><span class="tag w">避雷</span>现场买贵且可能排队，一定提前买</div>
+    <div class="row"><span class="tag g">馆内</span>单行线从3楼自上而下，喂养参考：斑海豹约13:45、企鹅约14:00、鲨鱼海湾约14:50</div>
+    <div class="row"><span class="tag">顺风车</span>上海站叫滴滴直达水族馆门口，约30分钟，约¥35-50，省换乘</div>
+    <div class="row"><span class="tag g">馆内餐厅</span>快餐厅在<b>1楼北入口</b>，游览路线结束后自然经过，容纳300人，中西式套餐，人均约¥50-80</div>
+    <div class="row"><span class="tag">营业时间</span>7月暑假延长至<b>21:00</b>，售票入馆至20:30，不用赶着出来</div>
+    <!-- Food accordion D2 aquarium -->
+    <div class="food-acc">
+      <div class="food-acc-head" onclick="toggleAcc(this)">🍜 出馆后午饭 / 南京路小吃</div>
+      <div class="food-acc-body">
+        <table class="ftable">
+          <thead><tr><th>地方</th><th>推荐</th><th>预约</th><th>人均</th></tr></thead>
+          <tbody>
+            <tr><td><div class="fn">正大广场美食城</div><div class="fd">水族馆步行约500m</div></td><td>多选择随便吃</td><td><span class="badge-no">不需要</span></td><td>¥40-80</td></tr>
+            <tr><td><div class="fn">沈大成（南京路）</div><div class="fd">老字号点心</div></td><td>糯米糕团·鲜肉月饼</td><td><span class="badge-no">不需要</span></td><td>¥20-40</td></tr>
+            <tr><td><div class="fn">光明邨（南京路）</div><div class="fd">老字号</div></td><td>蝴蝶酥·鲜肉月饼</td><td><span class="badge-no">不需要</span></td><td>¥20-50</td></tr>
+            <tr><td><div class="fn">御延公馆上海菜</div><div class="fd">宏伊广场6楼·南京东路站直达</div></td><td>本帮菜·红烧肉</td><td><span class="badge-warn">建议预约</span></td><td>¥150</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="trow">步行约15分钟到南京路 / 或地铁2号线1站到南京东路站</div>
+  <div class="scard">
+    <div class="sdot n"></div>
+    <div class="stime">出馆后 — 17:00</div>
+    <div class="sname">南京路步行街<a class="mbtn" href="https://uri.amap.com/search?keyword=南京路步行街&city=上海" target="_blank">📍高德</a></div>
+    <div class="row"><span class="tag">地址</span>黄浦区南京东路步行街</div>
+    <div class="row"><span class="tag g">推荐</span>午饭+随便逛，不赶时间</div>
+    <div class="row"><span class="tag w">避雷</span>蝴蝶酥去光明邨或杏花楼买，不要在第一食品商店买</div>
+  </div>
+  <div class="trow">步行约700m，约10分钟到外滩</div>
+  <div class="scard">
+    <div class="sdot r"></div>
+    <div class="stime">17:20 出发 → 17:30 到外滩</div>
+    <div class="sname">外滩（等19:00亮灯）<a class="mbtn" href="https://uri.amap.com/search?keyword=外滩上海&city=上海" target="_blank">📍高德</a></div>
+    <div class="row"><span class="tag">地址</span>黄浦区中山东一路沿江步道</div>
+    <div class="row"><span class="tag g">推荐</span>19:00建筑群亮灯，提前找好位置等</div>
+    <div class="row"><span class="tag g">推荐</span>从南往北沿江走，边走边拍</div>
+  </div>
+  <div class="trow">看完亮灯，步行约15分钟 / 打车约10分钟到城隍庙</div>
+  <div class="scard">
+    <div class="sdot n"></div>
+    <div class="stime">19:30 之后 · Optional</div>
+    <div class="sname">城隍庙 · 豫园商圈（夜游）<a class="mbtn" href="https://uri.amap.com/search?keyword=城隍庙豫园&city=上海" target="_blank">📍高德</a></div>
+    <div class="row"><span class="tag">地址</span>黄浦区福佑路168号附近商圈</div>
+    <div class="row"><span class="tag g">推荐</span>商圈免费逛，不用进豫园，九曲桥灯光最出片</div>
+    <div class="row"><span class="tag w">避雷</span>商圈游客价，吃之前看好价格</div>
+    <div class="notebox">💡 外滩看完有力气就去，累了直接去上海站等车也行</div>
+    <!-- Food accordion D2 chenghuang -->
+    <div class="food-acc">
+      <div class="food-acc-head" onclick="toggleAcc(this)">🍜 城隍庙宵夜小吃</div>
+      <div class="food-acc-body">
+        <table class="ftable">
+          <thead><tr><th>小吃</th><th>特色</th><th>价格</th></tr></thead>
+          <tbody>
+            <tr><td><div class="fn">南翔小笼</div></td><td>城隍庙标志，蟹粉小笼最值</td><td>¥50-80/笼</td></tr>
+            <tr><td><div class="fn">鸡鸭血汤</div></td><td>老松盛招牌，配面筋百叶</td><td>¥15-20</td></tr>
+            <tr><td><div class="fn">海棠糕/梅花糕</div></td><td>现烤现卖，边走边吃</td><td>¥10-15</td></tr>
+          </tbody>
+        </table>
+        <div class="food-note">⚠️ 商圈内价格偏高，吃之前确认价格</div>
+      </div>
+    </div>
+  </div>
+  <div class="trow">城隍庙→上海站：打车约15分钟 / 地铁10号线豫园站换2号线约20分钟</div>
+  <div class="scard">
+    <div class="sdot r"></div>
+    <div class="stime">回程 · 选一班</div>
+    <div class="sname">上海站 → 苏州站</div>
+    <div class="opt-block">
+      <h4><span class="opt-badge">首选</span> 23:40 K1506 → 苏州 00:40+1</h4>
+      <div class="opt-step"><div class="opt-num">⚠</div><div>普通列车<b>14:45起售</b>，当天准时在12306抢，¥14.5</div></div>
+    </div>
+    <div class="opt-block">
+      <h4><span class="opt-badge">备选</span> 22:23 G7212 → 苏州 22:52</h4>
+      <div class="opt-step"><div class="opt-num">💡</div><div>高铁提前买好，¥35，累了早点回</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- D3 -->
+<div class="sec" id="d3">
+  <div class="sec-head"><div class="dbadge j">D3</div><div><div class="sec-title">苏州 · 妆造约拍 + 金鸡湖 · Mon 13/7</div></div></div>
+  <div class="sec-sub">睡醒慢慢来，不赶，下午约拍，傍晚金鸡湖</div>
+
+  <div class="scard">
+    <div class="sdot g"></div>
+    <div class="stime">12:00 — 13:00</div>
+    <div class="sname">午饭</div>
+    <div class="row"><span class="tag w">注意</span>13:30开始妆造，不要吃太油太辣，别吃撑</div>
+    <div class="row"><span class="tag g">推荐</span>观前街/酒店附近随便找，不用走远</div>
+    <!-- Food accordion D3 lunch -->
+    <div class="food-acc">
+      <div class="food-acc-head" onclick="toggleAcc(this)">🍜 妆造前午饭选项</div>
+      <div class="food-acc-body">
+        <table class="ftable">
+          <thead><tr><th>店名</th><th>推荐</th><th>预约</th><th>人均</th></tr></thead>
+          <tbody>
+            <tr><td><div class="fn">松鹤楼（观前街）</div><div class="fd">观前街附近，步行约15分钟</div></td><td>松鼠桂鱼·响油鳝糊</td><td><span class="badge-warn">建议预约</span></td><td>¥80-150</td></tr>
+            <tr><td><div class="fn">得月楼</div><div class="fd">观前街附近</div></td><td>老字号苏帮菜</td><td><span class="badge-warn">建议预约</span></td><td>¥90</td></tr>
+            <tr><td><div class="fn">观前街周边随便</div><div class="fd">不用特地去远处</div></td><td>省时间给妆造</td><td><span class="badge-no">不需要</span></td><td>¥30-60</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="trow">步行约700m，约9分钟 / 打车约5分钟</div>
+  <div class="scard">
+    <div class="sdot r"></div>
+    <div class="stime">10:00 — 12:00</div>
+    <div class="sname">亭芳阁妆造<a class="mbtn" href="https://uri.amap.com/search?keyword=亭芳阁苏州东北街&city=苏州" target="_blank">📍高德</a></div>
+    <div class="row"><span class="tag">地址</span>苏州市姑苏区<b>东北街141号</b></div>
+    <div class="row"><span class="tag">预约</span>提前预约，出发前高德确认最新位置</div>
+    <div class="row"><span class="tag g">特色</span>汉服/古风妆造，平江路附近拍外景方便</div>
+  </div>
+  <div class="trow">在妆造店等 / 附近休息，不赶</div>
+  <div class="scard">
+    <div class="sdot r"></div>
+    <div class="stime">13:00</div>
+    <div class="sname">约拍开始</div>
+    <div class="row"><span class="tag">地点</span>跟着摄影师走，亭芳阁附近平江路一带也是好景点</div>
+  </div>
+  <div class="trow">约拍结束后打车去金鸡湖，约20-30分钟，约¥25-35</div>
+  <div class="scard">
+    <div class="sdot n"></div>
+    <div class="stime">17:30 — 19:30</div>
+    <div class="sname">金鸡湖望湖角<a class="mbtn" href="https://uri.amap.com/search?keyword=金鸡湖望湖角&city=苏州" target="_blank">📍高德</a></div>
+    <div class="row"><span class="tag">地址</span>金鸡湖景区望湖角/环湖步道（地铁3号线东方之门站步行约10分钟）</div>
+    <div class="row"><span class="tag g">推荐</span>望湖角栈桥走出去，两边都出片，17:30-18:00黄金光线</div>
+    <div class="row"><span class="tag w">注意</span>湖边风大，注意妆造发型和裙摆</div>
+    <div class="notebox">⚠️ 备案：如果约拍超时 或 下午有雷暴，跳过金鸡湖直接去李公堤吃晚饭，不用赶</div>
+  </div>
+  <div class="trow">步行约800m，约10分钟到李公堤</div>
+  <div class="scard">
+    <div class="sdot g"></div>
+    <div class="stime">19:30 之后</div>
+    <div class="sname">李公堤晚饭</div>
+    <!-- Food accordion D3 dinner -->
+    <div class="food-acc">
+      <div class="food-acc-head" onclick="toggleAcc(this)">🍜 李公堤晚饭选项</div>
+      <div class="food-acc-body">
+        <table class="ftable">
+          <thead><tr><th>店名</th><th>类型</th><th>预约</th><th>排队</th><th>人均</th></tr></thead>
+          <tbody>
+            <tr><td><div class="fn">江南雅厨</div><div class="fd">四季路李公堤3期16号楼 · 营业17:00-20:30</div></td><td>苏帮菜·黑珍珠一钻</td><td><span class="badge-warn">强烈建议提前</span></td><td><span class="badge-warn">预约后仍等约30分钟</span></td><td>¥200-300</td></tr>
+            <tr><td><div class="fn">成善·红火锅料理</div><div class="fd">李公堤</div></td><td>火锅+粤菜</td><td><span class="badge-warn">建议预约</span></td><td><span class="badge-warn">热门要排</span></td><td>¥120-150</td></tr>
+            <tr><td><div class="fn">苏州中心商场美食城</div><div class="fd">李公堤步行可到</div></td><td>多选择</td><td><span class="badge-no">不需要</span></td><td><span class="badge-no">一般不长</span></td><td>¥50-100</td></tr>
+          </tbody>
+        </table>
+        <div class="food-note">江南雅厨氛围最好，正对金鸡湖，晚上有评弹表演，预约包厢需提前2周，散桌当天现场拿号</div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px;"><span class="tag">回程</span>打车回酒店约25-30分钟</div>
+  </div>
+</div>
+
+<!-- D4 -->
+<div class="sec" id="d4">
+  <div class="sec-head"><div class="dbadge g">D4</div><div><div class="sec-title">上海 · 武康安福 + 返程 · Tue 14/7</div></div></div>
+  <div class="sec-sub">退房，带行李去上海，16:45前取行李，17:38虹桥出发</div>
+
+  <div class="deadline-box">
+    <h3>⚠️ 今天时间线（死线往前推）</h3>
+    <div class="dl-row"><div class="dl-time">17:38</div><div class="dl-arrow">←</div><div class="dl-desc">虹桥出发，玉山南 20:18到</div></div>
+    <div class="dl-row"><div class="dl-time">17:15</div><div class="dl-arrow">←</div><div class="dl-desc">必须到虹桥站</div></div>
+    <div class="dl-row"><div class="dl-time">17:00</div><div class="dl-arrow">←</div><div class="dl-desc">取行李完毕</div></div>
+    <div class="dl-row"><div class="dl-time">16:45</div><div class="dl-arrow">←</div><div class="dl-desc">⚠️ 最晚离开安福路/新天地出发去虹桥</div></div>
+  </div>
+
+  <div class="tbox" style="margin-top:12px;">
+    <h3>🚄 早上：苏州站 → 上海虹桥（退房日）</h3>
+    <div class="tstep"><div class="ticon">1</div><div>退房，行李带上，步行约<b>304m</b>到苏州站</div></div>
+    <div class="tstep"><div class="ticon">2</div><div>高铁到上海虹桥，约25-30分钟，¥29-50</div></div>
+    <div class="tstep"><div class="ticon">3</div><div>到虹桥后先存行李（T2出站层西出口约300m，存知己平台，背包¥10/行李箱¥20）</div></div>
+  </div>
+
+  <div class="scard">
+    <div class="sdot g"></div>
+    <div class="stime">10:00 — 11:30</div>
+    <div class="sname">武康大楼<a class="mbtn" href="https://uri.amap.com/search?keyword=桔子酒店苏州火车站店&city=苏州" target="_blank">📍高德</a></div>
+    <div class="row"><span class="tag">地址</span>徐汇区淮海中路1850号</div>
+    <div class="row"><span class="tag">交通</span>地铁<span class="lb">10号线</span>虹桥火车站→5站→交通大学，换<span class="lb">11号线</span>1站→江苏路，出站步行约<b>600m</b>，约8分钟，全程约40分钟</div>
+    <div class="row"><span class="tag w">避雷</span>门口密丰咖啡不值得排</div>
+    <div class="row"><span class="tag w">避雷</span>周末下午人太多，上午来才对</div>
+    <div class="row"><span class="tag g">推荐</span>最佳机位：对面斑马线往回走约30米，楼在梧桐树中间</div>
+  </div>
+  <div class="trow">沿武康路步行约1.1km，约15分钟顺路过去</div>
+  <div class="scard">
+    <div class="sdot g"></div>
+    <div class="stime">11:30 — 16:00</div>
+    <div class="sname">安福路 / 新天地（选一）</div>
+    <div class="tgl-group" id="tg-d4">
+      <div class="tgl-btn on" onclick="tglD4('anfu')">安福路</div>
+      <div class="tgl-btn" onclick="tglD4('xintd')">新天地</div>
+    </div>
+    <div class="tgl-c on" id="d4-anfu">
+      <div class="row"><span class="tag">地址</span>徐汇区安福路（武康路交叉口至常熟路）</div>
+      <div class="row"><span class="tag g">推荐</span>Manner、Seesaw、Birds of Paradise花园茶都在这</div>
+      <div class="row"><span class="tag w">避雷</span>话剧艺术中心附近拍照馆门口好看进去性价比低</div>
+      <div class="row"><span class="tag w">⚠️</span>16:00出发去虹桥，安福路→虹桥打车约25-30分钟</div>
+    </div>
+    <div class="tgl-c" id="d4-xintd">
+      <div class="row"><span class="tag">地址</span>黄浦区太仓路181弄</div>
+      <div class="row"><span class="tag">交通</span>地铁<span class="lb">10号线</span>/<span class="lb">13号线</span>新天地站1号口出</div>
+      <div class="row"><span class="tag g">推荐</span>石库门建筑氛围好，随便逛吃午饭</div>
+      <div class="row"><span class="tag w">避雷</span>网红餐厅分量少价格高，吃点心甜品更划算</div>
+      <div class="row"><span class="tag w">⚠️</span>16:00出发，新天地→虹桥地铁<span class="lb">13号线</span>直达约20分钟，或打车约20分钟</div>
+    </div>
+    <!-- Food accordion D4 lunch -->
+    <div class="food-acc">
+      <div class="food-acc-head" onclick="toggleAcc(this)">🍜 D4 午饭/咖啡</div>
+      <div class="food-acc-body">
+        <table class="ftable">
+          <thead><tr><th>地方</th><th>推荐</th><th>预约</th><th>人均</th></tr></thead>
+          <tbody>
+            <tr><td><div class="fn">安福路咖啡馆</div><div class="fd">Manner·Seesaw·Birds of Paradise</div></td><td>坐下吃简餐+咖啡</td><td><span class="badge-no">不需要</span></td><td>¥50-80</td></tr>
+            <tr><td><div class="fn">新天地餐厅区</div><div class="fd">石库门建筑内</div></td><td>氛围好，吃点心比正餐划算</td><td><span class="badge-warn">热门建议预约</span></td><td>¥80-150</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="trow">⚠️ 16:45前出发取行李去虹桥（晚高峰留足时间）</div>
+  <div class="scard">
+    <div class="sdot r"></div>
+    <div class="stime">⚠️ 17:15 到虹桥站</div>
+    <div class="sname">虹桥火车站 · 取行李 · 出发</div>
+    <div class="row"><span class="tag w">deadline</span>17:38出发，17:15前必须到站取好行李</div>
+    <div class="row"><span class="tag">行李</span>存知己，T2出站层西出口约300m</div>
+  </div>
+  <div class="trow">17:38发车</div>
+  <div class="scard">
+    <div class="sdot r"></div>
+    <div class="stime">17:38</div>
+    <div class="sname">虹桥 → 玉山南</div>
+    <div class="row"><span class="tag">到达</span>玉山南 20:18到，全程2小时40分钟</div>
+  </div>
+</div>
+
+<!-- LUGGAGE -->
+<div class="lug-sec" id="luggage">
+  <h2>🧳 行李方案（2选1）</h2>
+  <div class="lsub">D4退房，行李带到上海虹桥存好，逛完取行李上车</div>
+  <div class="lug-opt">
+    <h3><span class="lbadge">方案A</span> 存南京东路，逛完各自去取</h3>
+    <ul class="lug-steps">
+      <li><div class="lnum">1</div><div>高铁到上海站，打车去南京东路存行李</div></li>
+      <li><div class="lnum">2</div><div>轻装逛武康路→安福路/新天地</div></li>
+      <li><div class="lnum">3</div><div>16:00去取行李→打车/地铁去虹桥，约35-40分钟（晚高峰算45分钟）→ 需<b>15:30前</b>取完</div></li>
+    </ul>
+    <div class="store-box">
+      <div class="store-title">📍 南京东路寄存（途简单平台）</div>
+      <div class="store-row"><span class="st">位置</span>南京东路地铁站5号口出约50米</div>
+      <div class="store-row"><span class="st">时间</span>09:00 — 21:00</div>
+      <div class="store-row"><span class="st">费用</span>背包¥10 · 行李箱¥20</div>
+      <div class="store-row"><span class="st">预约</span>微信搜"途简单"小程序</div>
+    </div>
+  </div>
+  <div class="lug-opt">
+    <h3><span class="lbadge rec">方案B ✅推荐</span> 存虹桥，逛完直接回取</h3>
+    <ul class="lug-steps">
+      <li><div class="lnum">1</div><div>高铁坐到上海虹桥，行李存T2站内</div></li>
+      <li><div class="lnum">2</div><div>轻装逛武康路→安福路/新天地</div></li>
+      <li><div class="lnum">3</div><div>16:45出发回虹桥取行李，17:15到站上车</div></li>
+    </ul>
+    <div class="store-box">
+      <div class="store-title">📍 虹桥火车站寄存（存知己平台）</div>
+      <div class="store-row"><span class="st">位置</span>虹桥T2出站层，西出口约300米</div>
+      <div class="store-row"><span class="st">时间</span>06:00 — 22:00</div>
+      <div class="store-row"><span class="st">费用</span>背包¥10 · 行李箱¥20</div>
+      <div class="store-row"><span class="st">注意</span>新天地→虹桥地铁约20分钟，安福路→虹桥打车约25分钟</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end itin -->
+
+<!-- ══ PAGE 2: FOOD ══ -->
+<div class="pg" id="food">
+<div class="food-pg">
+  <h2>🍜 全程餐厅指南</h2>
+  <div class="fsub">按每天节点整理 · 含预约/排队/人均/顺路情况</div>
+
+  <div class="food-section">
+    <div class="food-section-title">🌙 D1 晚饭 · 苏州（观前街/平江路/山塘街）</div>
+    <div class="food-card">
+      <div class="food-card-head"><div><div class="fc-name">同得兴（十全街店）</div><div class="fc-type">苏式面老字号 · 《舌尖上的中国》拍摄地</div></div><div class="fc-price">¥40-60</div></div>
+      <div class="food-meta">
+        <div class="fm-item"><div class="fm-label">地址</div><div class="fm-val">十全街624号</div></div>
+        <div class="fm-item"><div class="fm-label">营业时间</div><div class="fm-val">07:00-13:00</div></div>
+        <div class="fm-item"><div class="fm-label">预约</div><div class="fm-val"><span class="badge-no">不需要</span></div></div>
+        <div class="fm-item"><div class="fm-label">排队</div><div class="fm-val"><span class="badge-warn">高峰期要排</span></div></div>
+        <div class="fm-item"><div class="fm-label">推荐</div><div class="fm-val">枫镇大肉面（7月夏季限定）</div></div>
+        <div class="fm-item"><div class="fm-label">顺路</div><div class="fm-val">从酒店步行约10分钟</div></div>
+      </div>
+      <div class="food-note">⚠️ 只做早午市，卖完即止，晚上去要找其他选择</div>
+    </div>
+    <div class="food-card">
+      <div class="food-card-head"><div><div class="fc-name">朱鸿兴（宫巷店）</div><div class="fc-type">苏式面 · 1938年开业</div></div><div class="fc-price">¥30-50</div></div>
+      <div class="food-meta">
+        <div class="fm-item"><div class="fm-label">预约</div><div class="fm-val"><span class="badge-no">不需要</span></div></div>
+        <div class="fm-item"><div class="fm-label">排队</div><div class="fm-val"><span class="badge-no">一般不长</span></div></div>
+        <div class="fm-item"><div class="fm-label">推荐</div><div class="fm-val">焖肉面·爆鱼面</div></div>
+        <div class="fm-item"><div class="fm-label">顺路</div><div class="fm-val">观前街附近</div></div>
+      </div>
+    </div>
+    <div class="food-card">
+      <div class="food-card-head"><div><div class="fc-name">鱼食饭稻（平江路68号）</div><div class="fc-type">苏帮菜土灶馆</div></div><div class="fc-price">¥70-80</div></div>
+      <div class="food-meta">
+        <div class="fm-item"><div class="fm-label">预约</div><div class="fm-val"><span class="badge-no">不需要</span></div></div>
+        <div class="fm-item"><div class="fm-label">排队</div><div class="fm-val"><span class="badge-warn">约等20分钟</span></div></div>
+        <div class="fm-item"><div class="fm-label">推荐</div><div class="fm-val">大骨煨萝卜·花雕蒸土鸡</div></div>
+        <div class="fm-item"><div class="fm-label">顺路</div><div class="fm-val">平江路上，逛街顺路</div></div>
+      </div>
+      <div class="food-note">等位期间提供免费酸梅汤；晚市部分菜品品相有所下降</div>
+    </div>
+    <div class="food-card">
+      <div class="food-card-head"><div><div class="fc-name">平江路/山塘街沿街小吃</div><div class="fc-type">边走边吃</div></div><div class="fc-price">¥10-20</div></div>
+      <div class="food-meta">
+        <div class="fm-item"><div class="fm-label">预约</div><div class="fm-val"><span class="badge-no">不需要</span></div></div>
+        <div class="fm-item"><div class="fm-label">排队</div><div class="fm-val"><span class="badge-no">无</span></div></div>
+        <div class="fm-item"><div class="fm-label">推荐</div><div class="fm-val">桂花糕·糖粥·蟹壳黄·卤鸭</div></div>
+        <div class="fm-item"><div class="fm-label">顺路</div><div class="fm-val">逛街随时买</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="food-section">
+    <div class="food-section-title">☀️ D2 水族馆后午饭 · 上海陆家嘴/南京路</div>
+    <div class="food-card">
+      <div class="food-card-head"><div><div class="fc-name">正大广场美食城</div><div class="fc-type">多口味选择</div></div><div class="fc-price">¥40-80</div></div>
+      <div class="food-meta">
+        <div class="fm-item"><div class="fm-label">距离</div><div class="fm-val">水族馆步行约500m</div></div>
+        <div class="fm-item"><div class="fm-label">预约</div><div class="fm-val"><span class="badge-no">不需要</span></div></div>
+        <div class="fm-item"><div class="fm-label">排队</div><div class="fm-val"><span class="badge-no">一般不长</span></div></div>
+        <div class="fm-item"><div class="fm-label">顺路</div><div class="fm-val">✅ 出馆直接走过去</div></div>
+      </div>
+    </div>
+    <div class="food-card">
+      <div class="food-card-head"><div><div class="fc-name">沈大成（南京路）</div><div class="fc-type">上海点心老字号</div></div><div class="fc-price">¥20-40</div></div>
+      <div class="food-meta">
+        <div class="fm-item"><div class="fm-label">预约</div><div class="fm-val"><span class="badge-no">不需要</span></div></div>
+        <div class="fm-item"><div class="fm-label">排队</div><div class="fm-val"><span class="badge-warn">热门时要排</span></div></div>
+        <div class="fm-item"><div class="fm-label">推荐</div><div class="fm-val">糯米糕团·条头糕·鲜肉月饼</div></div>
+        <div class="fm-item"><div class="fm-label">顺路</div><div class="fm-val">✅ 南京路逛街顺路</div></div>
+      </div>
+    </div>
+    <div class="food-card">
+      <div class="food-card-head"><div><div class="fc-name">光明邨（南京路）</div><div class="fc-type">上海老字号</div></div><div class="fc-price">¥20-50</div></div>
+      <div class="food-meta">
+        <div class="fm-item"><div class="fm-label">预约</div><div class="fm-val"><span class="badge-no">不需要</span></div></div>
+        <div class="fm-item"><div class="fm-label">排队</div><div class="fm-val"><span class="badge-warn">蝴蝶酥常排队</span></div></div>
+        <div class="fm-item"><div class="fm-label">推荐</div><div class="fm-val">蝴蝶酥（伴手礼首选）</div></div>
+        <div class="fm-item"><div class="fm-label">顺路</div><div class="fm-val">✅ 南京路上</div></div>
+      </div>
+    </div>
+    <div class="food-card">
+      <div class="food-card-head"><div><div class="fc-name">城隍庙小吃（Optional）</div><div class="fc-type">夜宵/随便吃</div></div><div class="fc-price">¥10-80</div></div>
+      <div class="food-meta">
+        <div class="fm-item"><div class="fm-label">预约</div><div class="fm-val"><span class="badge-no">不需要</span></div></div>
+        <div class="fm-item"><div class="fm-label">排队</div><div class="fm-val"><span class="badge-warn">南翔小笼常排</span></div></div>
+        <div class="fm-item"><div class="fm-label">推荐</div><div class="fm-val">南翔小笼·海棠糕·鸡鸭血汤</div></div>
+        <div class="fm-item"><div class="fm-label">注意</div><div class="fm-val">商圈游客价，先看好价格</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="food-section">
+    <div class="food-section-title">🌙 D3 妆造前午饭 + 金鸡湖后晚饭 · 苏州</div>
+    <div class="food-card">
+      <div class="food-card-head"><div><div class="fc-name">松鹤楼（观前街）</div><div class="fc-type">百年苏帮菜</div></div><div class="fc-price">¥80-150</div></div>
+      <div class="food-meta">
+        <div class="fm-item"><div class="fm-label">预约</div><div class="fm-val"><span class="badge-warn">建议预约</span></div></div>
+        <div class="fm-item"><div class="fm-label">排队</div><div class="fm-val"><span class="badge-warn">午市常有等位</span></div></div>
+        <div class="fm-item"><div class="fm-label">推荐</div><div class="fm-val">松鼠桂鱼·响油鳝糊</div></div>
+        <div class="fm-item"><div class="fm-label">顺路</div><div class="fm-val">观前街附近，步行约15分钟</div></div>
+      </div>
+    </div>
+    <div class="food-card">
+      <div class="food-card-head"><div><div class="fc-name">江南雅厨（李公堤）</div><div class="fc-type">苏帮菜·黑珍珠一钻·金鸡湖景观</div></div><div class="fc-price">¥200-300</div></div>
+      <div class="food-meta">
+        <div class="fm-item"><div class="fm-label">地址</div><div class="fm-val">四季路李公堤3期16号楼</div></div>
+        <div class="fm-item"><div class="fm-label">营业时间</div><div class="fm-val">11:00-13:30 / 17:00-20:30</div></div>
+        <div class="fm-item"><div class="fm-label">预约</div><div class="fm-val"><span class="badge-warn">强烈建议提前</span></div></div>
+        <div class="fm-item"><div class="fm-label">排队</div><div class="fm-val"><span class="badge-warn">预约后仍等约30分钟</span></div></div>
+        <div class="fm-item"><div class="fm-label">推荐</div><div class="fm-val">响油鳝糊·清溜虾仁·松鼠桂鱼</div></div>
+        <div class="fm-item"><div class="fm-label">特色</div><div class="fm-val">晚上有评弹表演，正对金鸡湖</div></div>
+      </div>
+      <div class="food-note">包厢需提前2周预订；散桌当天现场拿号，到了可能等30分钟；2026黑珍珠一钻</div>
+    </div>
+    <div class="food-card">
+      <div class="food-card-head"><div><div class="fc-name">苏州中心商场美食城</div><div class="fc-type">备选·多选择</div></div><div class="fc-price">¥50-100</div></div>
+      <div class="food-meta">
+        <div class="fm-item"><div class="fm-label">预约</div><div class="fm-val"><span class="badge-no">不需要</span></div></div>
+        <div class="fm-item"><div class="fm-label">排队</div><div class="fm-val"><span class="badge-no">一般不长</span></div></div>
+        <div class="fm-item"><div class="fm-label">顺路</div><div class="fm-val">李公堤步行可到</div></div>
+        <div class="fm-item"><div class="fm-label">适合</div><div class="fm-val">懒得预约或时间晚了</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="food-section">
+    <div class="food-section-title">☀️ D4 午饭 · 上海武康安福/新天地</div>
+    <div class="food-card">
+      <div class="food-card-head"><div><div class="fc-name">安福路各咖啡馆</div><div class="fc-type">轻食+咖啡</div></div><div class="fc-price">¥50-80</div></div>
+      <div class="food-meta">
+        <div class="fm-item"><div class="fm-label">推荐</div><div class="fm-val">Manner·Seesaw·Birds of Paradise</div></div>
+        <div class="fm-item"><div class="fm-label">预约</div><div class="fm-val"><span class="badge-no">不需要</span></div></div>
+        <div class="fm-item"><div class="fm-label">排队</div><div class="fm-val"><span class="badge-no">一般不长</span></div></div>
+        <div class="fm-item"><div class="fm-label">顺路</div><div class="fm-val">✅ 武康路逛完直接走过去</div></div>
+      </div>
+    </div>
+    <div class="food-card">
+      <div class="food-card-head"><div><div class="fc-name">新天地餐厅区</div><div class="fc-type">石库门建筑</div></div><div class="fc-price">¥80-150</div></div>
+      <div class="food-meta">
+        <div class="fm-item"><div class="fm-label">预约</div><div class="fm-val"><span class="badge-warn">热门建议预约</span></div></div>
+        <div class="fm-item"><div class="fm-label">排队</div><div class="fm-val"><span class="badge-warn">周末等位</span></div></div>
+        <div class="fm-item"><div class="fm-label">推荐</div><div class="fm-val">点心甜品比正餐划算</div></div>
+        <div class="fm-item"><div class="fm-label">注意</div><div class="fm-val">网红餐厅分量少价格高</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- end food -->
+
+<!-- ══ PAGE 3: MAP ══ -->
+<div class="pg" id="mapview">
+  <div class="map-header"><h2>路线地图</h2><span>OpenStreetMap · 点景点可导航</span></div>
+  <div class="dtabs">
+    <div class="dtab on" onclick="switchDay(0)">D1 苏州</div>
+    <div class="dtab" onclick="switchDay(1)">D2 上海</div>
+    <div class="dtab" onclick="switchDay(2)">D3 妆造+金鸡湖</div>
+    <div class="dtab" onclick="switchDay(3)">D4 武康+返程</div>
+    <div class="dtab" onclick="switchDay(4)">餐厅</div>
+  </div>
+  <div id="map" style="height:320px;width:100%;"></div>
+  <div class="mstops" id="mapstops"></div>
+  <div class="map-foot">高德导航按钮在各景点旁边 · 中国境内直接点击</div>
+</div>
+
+<!-- ══ PAGE 4: TIPS ══ -->
+<div class="pg" id="tips">
+<div class="tips-sec">
+  <h2>出发前必读</h2>
+  <div class="tip-grid">
+    <div class="tip-card">
+      <h4>📱 提前装好的App</h4>
+      <ul>
+        <li>高德地图 — 导航+打车（中国无法用谷歌地图）</li>
+        <li>12306 — 高铁票，用护照注册，提前买好所有车次</li>
+        <li>支付宝 / 微信 — 绑好外卡，出发前测试一次</li>
+        <li>途简单 / 存知己 — 微信搜索，行李寄存预约</li>
+        <li>VPN — Google/WhatsApp中国用不了，新加坡出发前装好</li>
+      </ul>
+    </div>
+    <div class="tip-card warn">
+      <h4>⚠️ 新加坡入境须知</h4>
+      <ul>
+        <li>新加坡护照入境中国免签15天，入境卡填好行程</li>
+        <li>高铁/地铁买票用护照，不是IC卡，随身带着</li>
+        <li>苏州北站在古城区北边约10km，不是古城内的苏州站</li>
+        <li>从苏州北站到酒店打车约30-35分钟，直接叫滴滴</li>
+      </ul>
+    </div>
+    <div class="tip-card">
+      <h4>🎫 提前买好的票/预约</h4>
+      <ul>
+        <li>12306高铁票 — 所有车次提前买好（包括D1虹桥→苏州、D2苏州→上海、D4苏州→虹桥）</li>
+        <li>海洋水族馆 — D1晚上买好D2的票，成人¥160（官方价，美团/官网提前买约¥160）</li>
+        <li>亭芳阁妆造 — 出发前提前预约，确认D3时间</li>
+        <li>江南雅厨 — D3晚饭想去的话，出发前预约（散桌当天拿号可能等30分钟）</li>
+        <li>K1506 — D2当天14:45准时12306抢票</li>
+      </ul>
+    </div>
+    <div class="tip-card warn">
+      <h4>❌ 通用避雷</h4>
+      <ul>
+        <li>景区门口不要买伴手礼，进去再买或去便利店</li>
+        <li>南京路蝴蝶酥去光明邨买，不要在第一食品商店</li>
+        <li>新天地网红餐厅分量少价格高，点心甜品更划算</li>
+        <li>城隍庙商圈游客价，吃之前看好价格</li>
+        <li>上海外滩节假日可能封路管制，7月工作日去相对好</li>
+      </ul>
+    </div>
+    <div class="tip-card">
+      <h4>🌧️ 天气备案</h4>
+      <ul>
+        <li>7月苏州下午常有雷阵雨，D3金鸡湖出发前查天气</li>
+        <li>天气差时金鸡湖日落不值得去，直接李公堤吃晚饭</li>
+        <li>雨天室内备选：诚品生活苏州（金鸡湖边）、苏州中心商场</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sos-box">
+    <h4>📞 紧急/实用号码</h4>
+    <div class="sos-row"><div class="sos-label">中国急救</div><div class="sos-num">120</div></div>
+    <div class="sos-row"><div class="sos-label">中国报警</div><div class="sos-num">110</div></div>
+    <div class="sos-row"><div class="sos-label">12306客服（高铁）</div><div class="sos-num">12306</div></div>
+    <div class="sos-row"><div class="sos-label">滴滴客服</div><div class="sos-num">App内联系</div></div>
+    <div class="sos-row"><div class="sos-label">新加坡驻上海总领馆</div><div class="sos-num">+86 21 6278 1990</div></div>
+  </div>
+</div>
+<div class="footer">沪苏行程手册 · 高德链接在中国境内打开可直接导航 · 信息以实际为准</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// Page switching
+function showPg(id){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.top-tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  document.querySelectorAll('.top-tab').forEach((t,i)=>{
+    if(['itin','food','mapview','tips'][i]===id) t.classList.add('on');
+  });
+}
+
+// Food accordion
+function toggleAcc(head){
+  head.classList.toggle('open');
+  head.nextElementSibling.classList.toggle('open');
+}
+
+// D4 toggle
+function tglD4(id){
+  ['anfu','xintd'].forEach(k=>document.getElementById('d4-'+k).classList.remove('on'));
+  document.getElementById('d4-'+id).classList.add('on');
+  document.querySelectorAll('#tg-d4 .tgl-btn').forEach((b,i)=>b.classList.toggle('on',['anfu','xintd'][i]===id));
+}
+
+// Map data
+const mapData=[
+  {label:'D1 苏州抵达', center:[31.330,120.613], zoom:13, color:'#b84c2c', stops:[
+    {name:'苏州站', lat:31.3305, lng:120.6013, time:'约09:30到',
+     notes:['步行304m到桔子酒店'], good:[], warn:[], transit:'步行304m到酒店',
+     amap:'https://uri.amap.com/search?keyword=苏州站&city=苏州'},
+    {name:'桔子酒店（苏州火车站店）', lat:31.3321, lng:120.6121, time:'入住休息',
+     notes:['步行304m到苏州站'], good:['打车约30-35min到苏州北站'], warn:[], transit:'13:00打车去苏州北站',
+     amap:'https://uri.amap.com/search?keyword=桔子酒店苏州火车站&city=苏州'},
+    {name:'苏州北站（接ZZY）', lat:31.4226, lng:120.6397, time:'14:35 ZZY到站',
+     notes:['距古城约10km'], good:[], warn:['打车约30-35分钟回酒店'], transit:'打车回酒店',
+     amap:'https://uri.amap.com/search?keyword=苏州北站&city=苏州'},
+    {name:'山塘街/平江路（晚上）', lat:31.3131, lng:120.6348, time:'晚上随便逛',
+     notes:['两条街随便选一个'], good:['灯笼亮起后最好拍'], warn:[], transit:null,
+     amap:'https://uri.amap.com/search?keyword=平江路历史街区&city=苏州'}
+  ]},
+  {label:'D2 上海', center:[31.235,121.498], zoom:14, color:'#1a3a60', stops:[
+    {name:'上海海洋水族馆', lat:31.2418, lng:121.5057, time:'12:00入馆',
+     notes:['陆家嘴环路1388号','地铁2号线陆家嘴站步行200m'], good:['7月营业至21:00'], warn:['提前买票¥160'], transit:'步行15min到南京路',
+     amap:'https://uri.amap.com/search?keyword=上海海洋水族馆&city=上海'},
+    {name:'南京路步行街', lat:31.2360, lng:121.4797, time:'出馆后',
+     notes:['黄浦区南京东路'], good:['沈大成·光明邨蝴蝶酥'], warn:['蝴蝶酥不要在第一食品买'], transit:'步行700m到外滩',
+     amap:'https://uri.amap.com/search?keyword=南京路步行街&city=上海'},
+    {name:'外滩（等19:00亮灯）', lat:31.2404, lng:121.4906, time:'17:30起',
+     notes:['中山东一路沿江步道'], good:['19:00建筑群亮灯'], warn:[], transit:'步行1.1km到城隍庙',
+     amap:'https://uri.amap.com/search?keyword=外滩上海&city=上海'},
+    {name:'城隍庙（Optional）', lat:31.2274, lng:121.4921, time:'19:30起',
+     notes:['福佑路168号附近'], good:['九曲桥灯光好拍'], warn:['商圈游客价注意'], transit:'K1506 23:40回苏州',
+     amap:'https://uri.amap.com/search?keyword=城隍庙豫园上海&city=上海'}
+  ]},
+  {label:'D3 妆造+金鸡湖', center:[31.311,120.648], zoom:12, color:'#2d5a47', stops:[
+    {name:'亭芳阁妆造', lat:31.3200, lng:120.6347, time:'10:00-12:00',
+     notes:['姑苏区东北街141号'], good:['平江路附近拍外景方便'], warn:['出发前高德确认位置'], transit:'步行约9min / 打车5min',
+     amap:'https://uri.amap.com/search?keyword=亭芳阁苏州汉服&city=苏州'},
+    {name:'约拍（平江路一带）', lat:31.3131, lng:120.6348, time:'13:00起',
+     notes:['跟摄影师走，亭芳阁附近'], good:[], warn:[], transit:'打车约20-30min去金鸡湖',
+     amap:'https://uri.amap.com/search?keyword=平江路历史街区&city=苏州'},
+    {name:'金鸡湖望湖角', lat:31.3070, lng:120.7040, time:'17:30',
+     notes:['金鸡湖景区望湖角'], good:['17:30-18:00黄金光线'], warn:['风大注意发型'], transit:'步行800m到李公堤',
+     amap:'https://uri.amap.com/search?keyword=金鸡湖望湖角&city=苏州'},
+    {name:'李公堤晚饭（江南雅厨）', lat:31.3148, lng:120.7010, time:'19:30',
+     notes:['四季路李公堤3期16号楼'], good:['黑珍珠一钻·正对金鸡湖'], warn:['需提前预约'], transit:null,
+     amap:'https://uri.amap.com/search?keyword=江南雅厨李公堤&city=苏州'}
+  ]},
+  {label:'D4 武康+返程', center:[31.210,121.447], zoom:14, color:'#c4963a', stops:[
+    {name:'武康大楼', lat:31.2045, lng:121.4383, time:'10:00',
+     notes:['徐汇区淮海中路1850号'], good:['对面斑马线往回走30米最出片'], warn:['密丰咖啡不值得排'], transit:'步行1.1km到安福路',
+     amap:'https://uri.amap.com/search?keyword=武康大楼上海&city=上海'},
+    {name:'安福路/新天地', lat:31.2142, lng:121.4444, time:'11:30-16:00',
+     notes:['徐汇区安福路'], good:['Manner·Seesaw·Birds of Paradise'], warn:['⚠️ 16:45最晚离开'], transit:'打车25-30min到虹桥',
+     amap:'https://uri.amap.com/search?keyword=安福路上海&city=上海'},
+    {name:'虹桥火车站', lat:31.1936, lng:121.3237, time:'17:15到 · 17:38出发',
+     notes:['T2出站层西出口约300m取行李'], good:[], warn:['17:15必须到站'], transit:'17:38→玉山南20:18',
+     amap:'https://uri.amap.com/search?keyword=上海虹桥火车站&city=上海'}
+  ]},
+  {label:'餐厅', center:[31.310,120.628], zoom:13, color:'#c4963a', stops:[
+    {name:'同得兴（十全街）', lat:31.3020, lng:120.6280, time:'07:00-13:00',
+     notes:['十全街624号 · 苏州'], good:['枫镇大肉面'], warn:['只到13:00'], transit:null,
+     amap:'https://uri.amap.com/search?keyword=同得兴十全街&city=苏州'},
+    {name:'鱼食饭稻（平江路）', lat:31.3131, lng:120.6348, time:'午/晚市',
+     notes:['平江路68号 · 苏州'], good:['土灶苏帮菜'], warn:['等约20分钟'], transit:null,
+     amap:'https://uri.amap.com/search?keyword=鱼食饭稻平江路&city=苏州'},
+    {name:'江南雅厨（李公堤）', lat:31.3148, lng:120.7010, time:'17:00-20:30',
+     notes:['四季路李公堤3期16号楼 · 苏州'], good:['黑珍珠一钻'], warn:['强烈建议提前预约'], transit:null,
+     amap:'https://uri.amap.com/search?keyword=江南雅厨李公堤&city=苏州'},
+    {name:'光明邨（南京路·上海）', lat:31.2370, lng:121.4760, time:'营业中',
+     notes:['南京路步行街附近 · 上海'], good:['蝴蝶酥伴手礼首选'], warn:[], transit:null,
+     amap:'https://uri.amap.com/search?keyword=光明邨蝴蝶酥南京路&city=上海'}
+  ]}
+];
+
+let map=null, markers=[], mapReady=false, curDay=0;
+
+function getIcon(n, color){
+  return L.divIcon({
+    className:'',
+    html:`<div style="width:26px;height:26px;background:${color};border:2.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;box-shadow:0 2px 5px rgba(0,0,0,.3);">${n}</div>`,
+    iconSize:[26,26], iconAnchor:[13,13], popupAnchor:[0,-15]
+  });
+}
+
+function renderStops(idx){
+  const d=mapData[idx];
+  const c=document.getElementById('mapstops');
+  c.innerHTML='';
+  d.stops.forEach((s,i)=>{
+    const row=document.createElement('div');
+    row.className='mrow';
+    const meta=[
+      ...s.notes.map(n=>`<span class="n">${n}</span>`),
+      ...s.good.map(g=>`<span class="g">✅ ${g}</span>`),
+      ...s.warn.map(w=>`<span class="w">⚠️ ${w}</span>`)
+    ].join('');
+    row.innerHTML=`<div class="mpin" style="background:${d.color}">${i+1}</div>
+      <div style="flex:1">
+        <div class="mname">${s.name}
+          <a href="${s.amap}" target="_blank" style="display:inline-block;background:#2d5a47;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;text-decoration:none;margin-left:4px;">📍高德</a>
+        </div>
+        ${s.time?`<div class="mtime">${s.time}</div>`:''}
+        ${meta?`<div class="mmeta">${meta}</div>`:''}
+      </div>`;
+    c.appendChild(row);
+    if(s.transit){
+      const t=document.createElement('div');
+      t.className='mtrans';
+      t.textContent=s.transit;
+      c.appendChild(t);
+    }
+  });
+}
+
+function switchDay(idx){
+  curDay=idx;
+  document.querySelectorAll('.dtab').forEach((t,i)=>t.classList.toggle('on',i===idx));
+  if(map) updateMarkers(idx);
+  renderStops(idx);
+}
+
+function updateMarkers(idx){
+  const d=mapData[idx];
+  markers.forEach(m=>map.removeLayer(m));
+  markers=[];
+  map.setView(d.center, d.zoom);
+  d.stops.forEach((s,i)=>{
+    const m=L.marker([s.lat,s.lng],{icon:getIcon(i+1,d.color)})
+      .addTo(map)
+      .bindPopup(`<b>${s.name}</b>${s.time?`<br><span style="font-size:11px;color:#666">${s.time}</span>`:''}`);
+    markers.push(m);
+  });
+  if(d.stops.length>1){
+    const line=L.polyline(d.stops.map(s=>[s.lat,s.lng]),
+      {color:d.color,weight:2.5,opacity:.7,dashArray:'6,5'}).addTo(map);
+    markers.push(line);
+  }
+}
+
+function initMap(){
+  if(mapReady) return;
+  map=L.map('map',{zoomControl:true,attributionControl:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+  L.control.attribution({prefix:'© <a href="https://openstreetmap.org">OSM</a>'}).addTo(map);
+  mapReady=true;
+  updateMarkers(0);
+  renderStops(0);
+}
+</script>
+</body>
+</html>
